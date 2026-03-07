@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import { useEffect, useState } from "react";
 import Image from "next/image";
@@ -97,7 +98,33 @@ export default function QuinielaPage() {
         color: "white",
       }}
     >
-      <h1 style={{ marginBottom: 24 }}>Quiniela Oscars 2026</h1>
+      <div
+  style={{
+    marginBottom: 24,
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 16,
+    flexWrap: "wrap",
+  }}
+>
+  <h1 style={{ margin: 0 }}>Quiniela Oscars 2026</h1>
+
+  <Link
+    href="/leaderboard"
+    style={{
+      padding: "10px 16px",
+      borderRadius: 10,
+      border: "1px solid #444",
+      background: "#161616",
+      color: "white",
+      textDecoration: "none",
+      fontWeight: 600,
+    }}
+  >
+    Ver tablero en vivo
+  </Link>
+</div>
 
       {categories.map((cat) => (
         <div key={cat.id} style={{ marginBottom: 40 }}>
