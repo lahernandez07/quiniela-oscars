@@ -25,6 +25,11 @@ export default function QuinielaPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedPicks, setSelectedPicks] = useState<Record<string, string>>({});
 
+  async function signOut() {
+    await supabase.auth.signOut();
+    window.location.href = "/login";
+  }
+
   async function loadUserPicks() {
     const { data: userData } = await supabase.auth.getUser();
     const user = userData.user;
@@ -99,32 +104,49 @@ export default function QuinielaPage() {
       }}
     >
       <div
-  style={{
-    marginBottom: 24,
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    gap: 16,
-    flexWrap: "wrap",
-  }}
->
-  <h1 style={{ margin: 0 }}>Quiniela Oscars 2026</h1>
+        style={{
+          marginBottom: 24,
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          gap: 16,
+          flexWrap: "wrap",
+        }}
+      >
+        <h1 style={{ margin: 0 }}>Quiniela Oscars 2026</h1>
 
-  <Link
-    href="/leaderboard"
-    style={{
-      padding: "10px 16px",
-      borderRadius: 10,
-      border: "1px solid #444",
-      background: "#161616",
-      color: "white",
-      textDecoration: "none",
-      fontWeight: 600,
-    }}
-  >
-    Ver tablero en vivo
-  </Link>
-</div>
+        <div style={{ display: "flex", gap: 10 }}>
+          <Link
+            href="/leaderboard"
+            style={{
+              padding: "10px 16px",
+              borderRadius: 10,
+              border: "1px solid #444",
+              background: "#161616",
+              color: "white",
+              textDecoration: "none",
+              fontWeight: 600,
+            }}
+          >
+            Ver tablero en vivo
+          </Link>
+
+          <button
+            onClick={signOut}
+            style={{
+              padding: "10px 16px",
+              borderRadius: 10,
+              border: "1px solid #444",
+              background: "#2a1414",
+              color: "white",
+              fontWeight: 600,
+              cursor: "pointer",
+            }}
+          >
+            Cerrar sesión
+          </button>
+        </div>
+      </div>
 
       {categories.map((cat) => (
         <div key={cat.id} style={{ marginBottom: 40 }}>
