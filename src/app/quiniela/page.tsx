@@ -16,6 +16,7 @@ type Category = {
   id: string;
   name: string;
   sort_order: number;
+  points?: number | null;
   winner_nominee_id?: string | null;
   nominees: Nominee[];
 };
@@ -275,7 +276,9 @@ export default function QuinielaPage() {
         <div id={`cat-${cat.id}`} key={cat.id} style={{ marginBottom: 40 }}>
           <div
             style={{
-              display: "inline-block",
+              display: "inline-flex",
+              flexDirection: "column",
+              gap: 4,
               marginBottom: 12,
               padding: "10px 16px",
               borderRadius: 12,
@@ -287,7 +290,16 @@ export default function QuinielaPage() {
               letterSpacing: "0.3px",
             }}
           >
-            🏆 {cat.sort_order}. {cat.name}
+            <span>🏆 {cat.sort_order}. {cat.name}</span>
+            <span
+              style={{
+                fontSize: 12,
+                color: "#facc15",
+                fontWeight: 700,
+              }}
+            >
+              Valor: {cat.points ?? 0} pts
+            </span>
           </div>
 
           <div

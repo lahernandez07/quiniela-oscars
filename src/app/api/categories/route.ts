@@ -33,18 +33,15 @@ export async function GET() {
   }
 
   const result = categories.map((cat) => {
-    const categoryNominees = nominees.filter(
-      (n) => n.category_id === cat.id
-    );
+    const categoryNominees = nominees.filter((n) => n.category_id === cat.id);
 
-    const winner = winners.find(
-      (w) => w.category_id === cat.id
-    );
+    const winner = winners.find((w) => w.category_id === cat.id);
 
     return {
       id: cat.id,
       name: cat.name,
       sort_order: cat.sort_order,
+      points: cat.points,
       winner_nominee_id: winner ? winner.nominee_id : null,
       nominees: categoryNominees.map((n) => ({
         id: n.id,
