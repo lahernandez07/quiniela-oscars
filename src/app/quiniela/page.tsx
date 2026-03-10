@@ -29,6 +29,11 @@ export default function QuinielaPage() {
     {}
   );
 
+  const totalCategories = categories.length;
+  const completedCategories = categories.filter(
+    (cat) => !!selectedPicks[cat.id]
+  ).length;
+
   async function signOut() {
     await supabase.auth.signOut();
     window.location.href = "/login";
@@ -172,6 +177,84 @@ export default function QuinielaPage() {
         </div>
       </div>
 
+      <div
+        style={{
+          position: "sticky",
+          top: 12,
+          zIndex: 50,
+          marginBottom: 24,
+          padding: "16px",
+          borderRadius: 14,
+          background: "rgba(0,0,0,0.72)",
+          backdropFilter: "blur(6px)",
+          border: "1px solid rgba(255,255,255,0.12)",
+          boxShadow: "0 8px 24px rgba(0,0,0,0.28)",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            gap: 12,
+            flexWrap: "wrap",
+            marginBottom: 14,
+          }}
+        >
+          <div style={{ fontWeight: 700, fontSize: 16 }}>
+            Progreso de tu quiniela
+          </div>
+
+          <div
+            style={{
+              fontSize: 14,
+              color: "#d1d5db",
+              fontWeight: 600,
+            }}
+          >
+            Picks completados: {completedCategories}/{totalCategories}
+          </div>
+        </div>
+
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            gap: 10,
+          }}
+        >
+          {categories.map((cat) => {
+            const isCompleted = !!selectedPicks[cat.id];
+
+            return (
+              <a
+                key={`jump-${cat.id}`}
+                href={`#cat-${cat.id}`}
+                style={{
+                  width: 36,
+                  height: 36,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  borderRadius: 999,
+                  textDecoration: "none",
+                  fontWeight: 700,
+                  fontSize: 14,
+                  color: isCompleted ? "#052e16" : "white",
+                  background: isCompleted ? "#4ade80" : "#374151",
+                  border: isCompleted
+                    ? "1px solid #22c55e"
+                    : "1px solid rgba(255,255,255,0.12)",
+                }}
+                title={`${cat.sort_order}. ${cat.name}`}
+              >
+                {cat.sort_order}
+              </a>
+            );
+          })}
+        </div>
+      </div>
+
       {picksLocked && (
         <div
           style={{
@@ -189,7 +272,7 @@ export default function QuinielaPage() {
       )}
 
       {categories.map((cat) => (
-        <div key={cat.id} style={{ marginBottom: 40 }}>
+        <div id={`cat-${cat.id}`} key={cat.id} style={{ marginBottom: 40 }}>
           <div
             style={{
               display: "inline-block",
