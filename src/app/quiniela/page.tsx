@@ -124,7 +124,22 @@ export default function QuinielaPage() {
       >
         <h1 style={{ margin: 0 }}>Quiniela Oscars 2026</h1>
 
-        <div style={{ display: "flex", gap: 10 }}>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <Link
+            href="/"
+            style={{
+              padding: "10px 16px",
+              borderRadius: 10,
+              border: "1px solid #444",
+              background: "#161616",
+              color: "white",
+              textDecoration: "none",
+              fontWeight: 600,
+            }}
+          >
+            Inicio
+          </Link>
+
           <Link
             href="/leaderboard"
             style={{
