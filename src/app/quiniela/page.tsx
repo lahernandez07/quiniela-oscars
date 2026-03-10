@@ -352,13 +352,14 @@ export default function QuinielaPage() {
                   }}
                 >
                   <input
-                    type="radio"
-                    name={cat.id}
-                    value={n.id}
-                    checked={isPicked}
-                    onChange={() => savePick(cat.id, n.id)}
-                    style={{ display: "none" }}
-                  />
+                  type="radio"
+                  name={cat.id}
+                  value={n.id}
+                  checked={isPicked}
+                  disabled={picksLocked}
+                  onChange={() => savePick(cat.id, n.id)}
+                  style={{ display: "none" }}
+                />
 
                   <div style={{ position: "relative" }}>
                     {hasImage ? (
