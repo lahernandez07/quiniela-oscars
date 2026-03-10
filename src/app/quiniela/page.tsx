@@ -203,7 +203,7 @@ export default function QuinielaPage() {
           }}
         >
           <div style={{ fontWeight: 700, fontSize: 16 }}>
-            Progreso de tu quiniela
+            Progreso de selección
           </div>
 
           <div
