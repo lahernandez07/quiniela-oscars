@@ -1,90 +1,289 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
+import Link from "next/link";
 
 type Nominee = {
   id: string;
   label: string;
+  image_url?: string | null;
 };
 
 type Category = {
   id: string;
   name: string;
   sort_order: number;
+  winner_nominee_id?: string | null;
   nominees: Nominee[];
 };
 
 export default function AdminPage() {
-
   const [categories, setCategories] = useState<Category[]>([]);
+  const [savingKey, setSavingKey] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadCategories() {
-
       const res = await fetch("/api/categories");
       const data = await res.json();
-
       setCategories(data);
-
     }
 
     loadCategories();
   }, []);
 
   async function setWinner(categoryId: string, nomineeId: string) {
+    try {
+      setSavingKey(`${categoryId}-${nomineeId}`);
 
-    await fetch("/api/winners", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        category_id: categoryId,
-        nominee_id: nomineeId
-      })
-    });
+      const res = await fetch("/api/winners", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          category_id: categoryId,
+          nominee_id: nomineeId,
+        }),
+      });
 
-    alert("Ganador guardado");
+      if (!res.ok) {
+        throw new Error("No se pudo guardar el ganador");
+      }
 
+      setCategories((prev) =>
+        prev.map((cat) =>
+          cat.id === categoryId
+            ? { ...cat, winner_nominee_id: nomineeId }
+            : cat
+        )
+      );
+
+      alert("Ganador guardado");
+    } catch (error) {
+      console.error(error);
+      alert("No se pudo guardar el ganador");
+    } finally {
+      setSavingKey(null);
+    }
   }
 
   return (
-
-    <main style={{maxWidth:900, margin:"40px auto", fontFamily:"sans-serif"}}>
-
-      <h1>Admin — Ganadores Oscars</h1>
-
-      {categories.map((cat) => (
-
-        <div key={cat.id} style={{marginBottom:40}}>
-
-          <h2>
-            {cat.sort_order}. {cat.name}
-          </h2>
-
-          {cat.nominees.map((n) => (
-
-            <label key={n.id} style={{display:"block", margin:"6px 0"}}>
-
-              <input
-                type="radio"
-                name={cat.id}
-                onChange={() => setWinner(cat.id, n.id)}
-              />
-
-              {" "}
-              {n.label}
-
-            </label>
-
-          ))}
-
+    <main
+      style={{
+        maxWidth: 1100,
+        margin: "40px auto",
+        fontFamily: "sans-serif",
+        padding: "0 16px",
+        color: "white",
+      }}
+    >
+      <div
+        style={{
+          marginBottom: 24,
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          gap: 16,
+          flexWrap: "wrap",
+        }}
+      >
+        <div>
+          <h1 style={{ margin: 0 }}>Admin — Ganadores Oscars</h1>
+          <p style={{ marginTop: 8, color: "#aaa" }}>
+            Selecciona el ganador oficial por categoría.
+          </p>
         </div>
 
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <Link
+            href="/"
+            style={{
+              padding: "10px 16px",
+              borderRadius: 10,
+              border: "1px solid #444",
+              background: "#161616",
+              color: "white",
+              textDecoration: "none",
+              fontWeight: 600,
+            }}
+          >
+            Inicio
+          </Link>
+
+          <Link
+            href="/leaderboard"
+            style={{
+              padding: "10px 16px",
+              borderRadius: 10,
+              border: "1px solid #444",
+              background: "#161616",
+              color: "white",
+              textDecoration: "none",
+              fontWeight: 600,
+            }}
+          >
+            Ver tablero
+          </Link>
+        </div>
+      </div>
+
+      {categories.map((cat) => (
+        <div key={cat.id} style={{ marginBottom: 40 }}>
+          <div
+            style={{
+              display: "inline-block",
+              marginBottom: 12,
+              padding: "10px 16px",
+              borderRadius: 12,
+              background: "rgba(0,0,0,0.65)",
+              backdropFilter: "blur(4px)",
+              color: "white",
+              fontWeight: 700,
+              border: "1px solid rgba(255,255,255,0.15)",
+              letterSpacing: "0.3px",
+            }}
+          >
+            🏆 {cat.sort_order}. {cat.name}
+          </div>
+
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
+              gap: 16,
+              marginTop: 16,
+            }}
+          >
+            {cat.nominees.map((n) => {
+              const isWinner = cat.winner_nominee_id === n.id;
+              const hasImage = !!n.image_url && n.image_url.trim() !== "";
+              const isSaving = savingKey === `${cat.id}-${n.id}`;
+
+              return (
+                <label
+                  key={n.id}
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    gap: 12,
+                    cursor: isSaving ? "wait" : "pointer",
+                    padding: 12,
+                    borderRadius: 12,
+                    border: isWinner ? "2px solid #facc15" : "1px solid #444",
+                    background: isWinner ? "#2a2410" : "#111",
+                    opacity: isSaving ? 0.7 : 1,
+                  }}
+                >
+                  <input
+                    type="radio"
+                    name={cat.id}
+                    checked={isWinner}
+                    onChange={() => setWinner(cat.id, n.id)}
+                    style={{ display: "none" }}
+                  />
+
+                  <div style={{ position: "relative" }}>
+                    {hasImage ? (
+                      <Image
+                        src={n.image_url as string}
+                        alt={n.label}
+                        width={180}
+                        height={270}
+                        style={{
+                          objectFit: "cover",
+                          borderRadius: 4,
+                          border: "1px solid #444",
+                          display: "block",
+                        }}
+                      />
+                    ) : (
+                      <div
+                        style={{
+                          width: 180,
+                          height: 270,
+                          borderRadius: 4,
+                          background: "#1f1f1f",
+                          border: "1px solid #444",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          color: "#aaa",
+                          fontSize: 12,
+                          fontWeight: 600,
+                        }}
+                      >
+                        No poster
+                      </div>
+                    )}
+
+                    {isWinner && (
+                      <div
+                        style={{
+                          position: "absolute",
+                          top: 8,
+                          left: 8,
+                          background: "#facc15",
+                          color: "#000",
+                          padding: "4px 8px",
+                          borderRadius: 6,
+                          fontSize: 12,
+                          fontWeight: "bold",
+                        }}
+                      >
+                        🏆 GANADOR
+                      </div>
+                    )}
+
+                    {isSaving && (
+                      <div
+                        style={{
+                          position: "absolute",
+                          top: 8,
+                          right: 8,
+                          background: "#2563eb",
+                          color: "#fff",
+                          padding: "4px 8px",
+                          borderRadius: 6,
+                          fontSize: 12,
+                          fontWeight: "bold",
+                        }}
+                      >
+                        Guardando...
+                      </div>
+                    )}
+                  </div>
+
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      textAlign: "center",
+                    }}
+                  >
+                    <span style={{ fontWeight: 600 }}>{n.label}</span>
+
+                    {isWinner && (
+                      <span
+                        style={{
+                          fontSize: 11,
+                          color: "#facc15",
+                          fontWeight: "bold",
+                          marginTop: 4,
+                        }}
+                      >
+                        Ganador oficial
+                      </span>
+                    )}
+                  </div>
+                </label>
+              );
+            })}
+          </div>
+        </div>
       ))}
-
     </main>
-
   );
-
 }

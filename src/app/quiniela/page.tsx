@@ -1,5 +1,6 @@
 "use client";
 
+import { isPicksLocked } from "@/lib/deadline";
 import Link from "next/link";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import { useEffect, useState } from "react";
@@ -20,10 +21,13 @@ type Category = {
 };
 
 export default function QuinielaPage() {
+  const picksLocked = isPicksLocked();
   const supabase = supabaseBrowser();
 
   const [categories, setCategories] = useState<Category[]>([]);
-  const [selectedPicks, setSelectedPicks] = useState<Record<string, string>>({});
+  const [selectedPicks, setSelectedPicks] = useState<Record<string, string>>(
+    {}
+  );
 
   async function signOut() {
     await supabase.auth.signOut();
@@ -67,6 +71,11 @@ export default function QuinielaPage() {
   }, []);
 
   async function savePick(categoryId: string, nomineeId: string) {
+    if (picksLocked) {
+      alert("La quiniela ya está cerrada.");
+      return;
+    }
+
     const { data: userData } = await supabase.auth.getUser();
     const user = userData.user;
 
@@ -148,11 +157,40 @@ export default function QuinielaPage() {
         </div>
       </div>
 
+      {picksLocked && (
+        <div
+          style={{
+            background: "#7f1d1d",
+            color: "white",
+            padding: "12px 16px",
+            marginBottom: 24,
+            borderRadius: 10,
+            border: "1px solid #ef4444",
+            fontWeight: 600,
+          }}
+        >
+          La quiniela está cerrada. Ya no se pueden modificar picks.
+        </div>
+      )}
+
       {categories.map((cat) => (
         <div key={cat.id} style={{ marginBottom: 40 }}>
-          <h2 style={{ marginBottom: 8 }}>
-            {cat.sort_order}. {cat.name}
-          </h2>
+          <div
+            style={{
+              display: "inline-block",
+              marginBottom: 12,
+              padding: "10px 16px",
+              borderRadius: 12,
+              background: "rgba(0,0,0,0.65)",
+              backdropFilter: "blur(4px)",
+              color: "white",
+              fontWeight: 700,
+              border: "1px solid rgba(255,255,255,0.15)",
+              letterSpacing: "0.3px",
+            }}
+          >
+            🏆 {cat.sort_order}. {cat.name}
+          </div>
 
           <div
             style={{
@@ -195,11 +233,12 @@ export default function QuinielaPage() {
                     flexDirection: "column",
                     alignItems: "center",
                     gap: 12,
-                    cursor: "pointer",
+                    cursor: picksLocked ? "not-allowed" : "pointer",
                     padding: 12,
                     borderRadius: 12,
                     border: borderColor,
                     background: backgroundColor,
+                    opacity: picksLocked ? 0.95 : 1,
                   }}
                 >
                   <input
