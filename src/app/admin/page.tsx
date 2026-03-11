@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -31,6 +31,23 @@ export default function AdminPage() {
 
     loadCategories();
   }, []);
+
+  const confirmedWinners = categories.filter(
+    (cat) => !!cat.winner_nominee_id
+  ).length;
+
+  const navCategories = useMemo(() => {
+    return [...categories].sort((a, b) => {
+      const aDone = !!a.winner_nominee_id;
+      const bDone = !!b.winner_nominee_id;
+
+      if (aDone !== bDone) {
+        return aDone ? 1 : -1;
+      }
+
+      return a.sort_order - b.sort_order;
+    });
+  }, [categories]);
 
   async function setWinner(categoryId: string, nomineeId: string) {
     try {
@@ -128,8 +145,90 @@ export default function AdminPage() {
         </div>
       </div>
 
+      <div
+        style={{
+          position: "sticky",
+          top: 12,
+          zIndex: 50,
+          marginBottom: 24,
+          padding: "16px",
+          borderRadius: 14,
+          background: "rgba(0,0,0,0.72)",
+          backdropFilter: "blur(6px)",
+          border: "1px solid rgba(255,255,255,0.12)",
+          boxShadow: "0 8px 24px rgba(0,0,0,0.28)",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            gap: 12,
+            flexWrap: "wrap",
+            marginBottom: 14,
+          }}
+        >
+          <div
+            style={{
+              fontWeight: 700,
+              fontSize: 16,
+            }}
+          >
+            Navegación rápida de categorías
+          </div>
+
+          <div
+            style={{
+              fontSize: 14,
+              color: "#d1d5db",
+              fontWeight: 700,
+            }}
+          >
+            Ganadores confirmados: {confirmedWinners}/{categories.length}
+          </div>
+        </div>
+
+        <div
+          style={{
+            display: "flex",
+            gap: 10,
+            overflowX: "auto",
+            paddingBottom: 4,
+          }}
+        >
+          {navCategories.map((cat) => {
+            const hasWinner = !!cat.winner_nominee_id;
+
+            return (
+              <a
+                key={`jump-${cat.id}`}
+                href={`#cat-${cat.id}`}
+                style={{
+                  flex: "0 0 auto",
+                  padding: "10px 14px",
+                  borderRadius: 999,
+                  textDecoration: "none",
+                  fontWeight: 700,
+                  fontSize: 13,
+                  whiteSpace: "nowrap",
+                  color: hasWinner ? "#052e16" : "white",
+                  background: hasWinner ? "#4ade80" : "#374151",
+                  border: hasWinner
+                    ? "1px solid #22c55e"
+                    : "1px solid rgba(255,255,255,0.12)",
+                }}
+                title={cat.name}
+              >
+                {cat.sort_order}. {cat.name}
+              </a>
+            );
+          })}
+        </div>
+      </div>
+
       {categories.map((cat) => (
-        <div key={cat.id} style={{ marginBottom: 40 }}>
+        <div id={`cat-${cat.id}`} key={cat.id} style={{ marginBottom: 40 }}>
           <div
             style={{
               display: "inline-block",
