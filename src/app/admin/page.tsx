@@ -23,7 +23,6 @@ export default function AdminPage() {
   const [savingKey, setSavingKey] = useState<string | null>(null);
   const [activeCatId, setActiveCatId] = useState<string | null>(null);
 
-  // refs para cada sección de categoría (para scroll suave)
   const catRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   useEffect(() => {
@@ -40,7 +39,6 @@ export default function AdminPage() {
     (cat) => !!cat.winner_nominee_id
   ).length;
 
-  // categorías para la barra: pendientes primero, luego resueltas
   const navCategories = useMemo(() => {
     return [...categories].sort((a, b) => {
       const aDone = !!a.winner_nominee_id;
@@ -51,7 +49,6 @@ export default function AdminPage() {
     });
   }, [categories]);
 
-  // al hacer click en la barra, saltamos a la categoría
   function scrollToCategory(catId: string) {
     const el = catRefs.current[catId];
     if (el) {
@@ -60,7 +57,6 @@ export default function AdminPage() {
     }
   }
 
-  // encontrar la siguiente categoría pendiente
   function getNextPendingCategory(currentId: string) {
     const pending = categories.filter((c) => !c.winner_nominee_id);
     const index = pending.findIndex((c) => c.id === currentId);
@@ -96,7 +92,6 @@ export default function AdminPage() {
 
       alert("Ganador guardado");
 
-      // auto-scroll al siguiente premio pendiente
       const next = getNextPendingCategory(categoryId);
       if (next) {
         setTimeout(() => scrollToCategory(next.id), 400);
@@ -115,7 +110,7 @@ export default function AdminPage() {
         maxWidth: 1100,
         margin: "40px auto",
         fontFamily: "sans-serif",
-        padding: "0 260px 0 16px", // espacio para la barra lateral
+        padding: "0 260px 0 16px",
         color: "white",
       }}
     >
@@ -211,7 +206,7 @@ export default function AdminPage() {
 
           return (
             <button
-              key={`jump-${cat.id}`}
+              key={cat.id}
               onClick={() => scrollToCategory(cat.id)}
               style={{
                 padding: "10px 12px",
@@ -241,7 +236,11 @@ export default function AdminPage() {
         <div
           id={`cat-${cat.id}`}
           key={cat.id}
-          ref={(el) => (catRefs.current[cat.id] = el)}
+          ref={(el) => {
+            if (el) {
+              catRefs.current[cat.id] = el;
+            }
+          }}
           style={{ marginBottom: 40 }}
         >
           <div
