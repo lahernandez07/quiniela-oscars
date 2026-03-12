@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -21,10 +21,14 @@ type Category = {
 export default function AdminPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [savingKey, setSavingKey] = useState<string | null>(null);
+  const [activeCatId, setActiveCatId] = useState<string | null>(null);
+
+  // refs para cada sección de categoría (para scroll suave)
+  const catRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   useEffect(() => {
     async function loadCategories() {
-      const res = await fetch("/api/categories");
+      const res = await fetch("/api/categories", { cache: "no-store" });
       const data = await res.json();
       setCategories(data);
     }
@@ -36,18 +40,32 @@ export default function AdminPage() {
     (cat) => !!cat.winner_nominee_id
   ).length;
 
+  // categorías para la barra: pendientes primero, luego resueltas
   const navCategories = useMemo(() => {
     return [...categories].sort((a, b) => {
       const aDone = !!a.winner_nominee_id;
       const bDone = !!b.winner_nominee_id;
 
-      if (aDone !== bDone) {
-        return aDone ? 1 : -1;
-      }
-
+      if (aDone !== bDone) return aDone ? 1 : -1;
       return a.sort_order - b.sort_order;
     });
   }, [categories]);
+
+  // al hacer click en la barra, saltamos a la categoría
+  function scrollToCategory(catId: string) {
+    const el = catRefs.current[catId];
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+      setActiveCatId(catId);
+    }
+  }
+
+  // encontrar la siguiente categoría pendiente
+  function getNextPendingCategory(currentId: string) {
+    const pending = categories.filter((c) => !c.winner_nominee_id);
+    const index = pending.findIndex((c) => c.id === currentId);
+    return pending[index + 1];
+  }
 
   async function setWinner(categoryId: string, nomineeId: string) {
     try {
@@ -77,6 +95,12 @@ export default function AdminPage() {
       );
 
       alert("Ganador guardado");
+
+      // auto-scroll al siguiente premio pendiente
+      const next = getNextPendingCategory(categoryId);
+      if (next) {
+        setTimeout(() => scrollToCategory(next.id), 400);
+      }
     } catch (error) {
       console.error(error);
       alert("No se pudo guardar el ganador");
@@ -91,10 +115,12 @@ export default function AdminPage() {
         maxWidth: 1100,
         margin: "40px auto",
         fontFamily: "sans-serif",
-        padding: "0 16px",
+        padding: "0 260px 0 16px", // espacio para la barra lateral
         color: "white",
       }}
     >
+      {/* HEADER */}
+
       <div
         style={{
           marginBottom: 24,
@@ -145,90 +171,79 @@ export default function AdminPage() {
         </div>
       </div>
 
+      {/* BARRA LATERAL */}
+
       <div
         style={{
-          position: "sticky",
-          top: 12,
-          zIndex: 50,
-          marginBottom: 24,
-          padding: "16px",
+          position: "fixed",
+          right: 20,
+          top: 120,
+          zIndex: 100,
+          display: "flex",
+          flexDirection: "column",
+          gap: 8,
+          padding: 14,
           borderRadius: 14,
-          background: "rgba(0,0,0,0.72)",
+          background: "rgba(0,0,0,0.75)",
           backdropFilter: "blur(6px)",
           border: "1px solid rgba(255,255,255,0.12)",
           boxShadow: "0 8px 24px rgba(0,0,0,0.28)",
+          maxHeight: "75vh",
+          overflowY: "auto",
+          width: 220,
         }}
       >
         <div
           style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            gap: 12,
-            flexWrap: "wrap",
-            marginBottom: 14,
+            fontSize: 13,
+            fontWeight: 700,
+            textAlign: "center",
+            marginBottom: 8,
+            color: "#d1d5db",
           }}
         >
-          <div
-            style={{
-              fontWeight: 700,
-              fontSize: 16,
-            }}
-          >
-            Navegación rápida de categorías
-          </div>
-
-          <div
-            style={{
-              fontSize: 14,
-              color: "#d1d5db",
-              fontWeight: 700,
-            }}
-          >
-            Ganadores confirmados: {confirmedWinners}/{categories.length}
-          </div>
+          {confirmedWinners}/{categories.length} premios
         </div>
 
-        <div
-          style={{
-            display: "flex",
-            gap: 10,
-            overflowX: "auto",
-            paddingBottom: 4,
-          }}
-        >
-          {navCategories.map((cat) => {
-            const hasWinner = !!cat.winner_nominee_id;
+        {navCategories.map((cat) => {
+          const hasWinner = !!cat.winner_nominee_id;
+          const isActive = activeCatId === cat.id;
 
-            return (
-              <a
-                key={`jump-${cat.id}`}
-                href={`#cat-${cat.id}`}
-                style={{
-                  flex: "0 0 auto",
-                  padding: "10px 14px",
-                  borderRadius: 999,
-                  textDecoration: "none",
-                  fontWeight: 700,
-                  fontSize: 13,
-                  whiteSpace: "nowrap",
-                  color: hasWinner ? "#052e16" : "white",
-                  background: hasWinner ? "#4ade80" : "#374151",
-                  border: hasWinner
-                    ? "1px solid #22c55e"
-                    : "1px solid rgba(255,255,255,0.12)",
-                }}
-                title={cat.name}
-              >
-                {cat.sort_order}. {cat.name}
-              </a>
-            );
-          })}
-        </div>
+          return (
+            <button
+              key={`jump-${cat.id}`}
+              onClick={() => scrollToCategory(cat.id)}
+              style={{
+                padding: "10px 12px",
+                borderRadius: 8,
+                fontWeight: 600,
+                fontSize: 13,
+                textAlign: "left",
+                cursor: "pointer",
+                background: hasWinner
+                  ? "#4ade80"
+                  : isActive
+                  ? "#1d4ed8"
+                  : "#374151",
+                color: hasWinner ? "#052e16" : "white",
+                border: "1px solid rgba(255,255,255,0.12)",
+              }}
+            >
+              {cat.name}
+            </button>
+          );
+        })}
       </div>
 
+      {/* CATEGORÍAS */}
+
       {categories.map((cat) => (
-        <div id={`cat-${cat.id}`} key={cat.id} style={{ marginBottom: 40 }}>
+        <div
+          id={`cat-${cat.id}`}
+          key={cat.id}
+          ref={(el) => (catRefs.current[cat.id] = el)}
+          style={{ marginBottom: 40 }}
+        >
           <div
             style={{
               display: "inline-block",
@@ -240,7 +255,6 @@ export default function AdminPage() {
               color: "white",
               fontWeight: 700,
               border: "1px solid rgba(255,255,255,0.15)",
-              letterSpacing: "0.3px",
             }}
           >
             🏆 {cat.sort_order}. {cat.name}
@@ -249,7 +263,7 @@ export default function AdminPage() {
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
+              gridTemplateColumns: "repeat(3, 1fr)",
               gap: 16,
               marginTop: 16,
             }}
@@ -294,7 +308,6 @@ export default function AdminPage() {
                           objectFit: "cover",
                           borderRadius: 4,
                           border: "1px solid #444",
-                          display: "block",
                         }}
                       />
                     ) : (
@@ -310,7 +323,6 @@ export default function AdminPage() {
                           justifyContent: "center",
                           color: "#aaa",
                           fontSize: 12,
-                          fontWeight: 600,
                         }}
                       >
                         No poster
@@ -354,29 +366,9 @@ export default function AdminPage() {
                     )}
                   </div>
 
-                  <div
-                    style={{
-                      display: "flex",
-                      flexDirection: "column",
-                      alignItems: "center",
-                      textAlign: "center",
-                    }}
-                  >
-                    <span style={{ fontWeight: 600 }}>{n.label}</span>
-
-                    {isWinner && (
-                      <span
-                        style={{
-                          fontSize: 11,
-                          color: "#facc15",
-                          fontWeight: "bold",
-                          marginTop: 4,
-                        }}
-                      >
-                        Ganador oficial
-                      </span>
-                    )}
-                  </div>
+                  <span style={{ fontWeight: 600, textAlign: "center" }}>
+                    {n.label}
+                  </span>
                 </label>
               );
             })}
