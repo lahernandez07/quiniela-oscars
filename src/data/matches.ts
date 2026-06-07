@@ -1,22 +1,17 @@
-import { Match } from "@/types/match";
+export type Match = {
+  id: number;
+  matchNumber: number;
+  stage: "group";
+  group: string;
+  home: string;
+  away: string;
+  homeFlag: string;
+  awayFlag: string;
+  date: string;
+  time: string;
+  stadium: string;
+  city: string;
+  cut: string;
+};
 
-export const matches: Match[] = [
-  {
-    id: 1,
-    home: "México",
-    away: "Japón",
-    group: "Grupo A",
-  },
-  {
-    id: 2,
-    home: "Brasil",
-    away: "Estados Unidos",
-    group: "Grupo B",
-  },
-  {
-    id: 3,
-    home: "Argentina",
-    away: "Francia",
-    group: "Grupo C",
-  },
-];
+export const matches: Match[] = [];
