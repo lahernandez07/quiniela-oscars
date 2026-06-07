@@ -1,502 +1,638 @@
 "use client";
 
-import { isPicksLocked } from "@/lib/deadline";
 import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
-import { useEffect, useState } from "react";
-import Image from "next/image";
 
-type Nominee = {
-  id: string;
-  label: string;
-  image_url?: string | null;
+type Match = {
+  id: number;
+  matchNumber: number;
+  stage: "group";
+  group: string;
+  home: string;
+  away: string;
+  homeFlag: string;
+  awayFlag: string;
+  cut: string;
+  date: string;
+  time: string;
+  stadium: string;
+  city: string;
 };
 
-type Category = {
-  id: string;
-  name: string;
-  sort_order: number;
-  points?: number | null;
-  winner_nominee_id?: string | null;
-  nominees: Nominee[];
+type Prediction = {
+  homeScore: string;
+  awayScore: string;
 };
+
+type CutFilter = "all" | "cut1" | "cut2" | "cut3";
+
+const cuts = {
+  all: {
+    label: "Todos",
+    description: "Todos los partidos disponibles",
+  },
+  cut1: {
+    label: "Corte 1",
+    description: "11 al 14 de junio · Pago lunes 15",
+    start: "2026-06-11",
+    end: "2026-06-14",
+  },
+  cut2: {
+    label: "Corte 2",
+    description: "15 al 21 de junio · Pago lunes 22",
+    start: "2026-06-15",
+    end: "2026-06-21",
+  },
+  cut3: {
+    label: "Corte 3",
+    description: "22 al 27 de junio · Pago lunes 29",
+    start: "2026-06-22",
+    end: "2026-06-27",
+  },
+};
+
+function isMatchLocked(match: Match) {
+  const mexicoDate = new Date(`${match.date}T${match.time}:00-06:00`);
+  const now = new Date();
+
+  return now >= mexicoDate;
+}
+
+function isMatchInCut(match: Match, cut: CutFilter) {
+  if (cut === "all") return true;
+
+  const selectedCut = cuts[cut];
+
+  return match.date >= selectedCut.start && match.date <= selectedCut.end;
+}
 
 export default function QuinielaPage() {
-  const picksLocked = isPicksLocked();
   const supabase = supabaseBrowser();
 
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [selectedPicks, setSelectedPicks] = useState<Record<string, string>>(
-    {}
-  );
+  const [matches, setMatches] = useState<Match[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [activeCut, setActiveCut] = useState<CutFilter>("all");
 
-  const totalCategories = categories.length;
-  const completedCategories = categories.filter(
-    (cat) => !!selectedPicks[cat.id]
-  ).length;
-
-  async function signOut() {
-    await supabase.auth.signOut();
-    window.location.href = "/login";
-  }
-
-  async function loadUserPicks() {
-    const { data: userData } = await supabase.auth.getUser();
-    const user = userData.user;
-
-    if (!user) return;
-
-    const { data, error } = await supabase
-      .from("picks")
-      .select("category_id, nominee_id")
-      .eq("user_id", user.id);
-
-    if (error) {
-      console.error("Error cargando picks:", error);
-      return;
-    }
-
-    const picksMap: Record<string, string> = {};
-
-    data.forEach((p) => {
-      picksMap[p.category_id] = p.nominee_id;
-    });
-
-    setSelectedPicks(picksMap);
-  }
+  const [predictions, setPredictions] =
+    useState<Record<number, Prediction>>({});
 
   useEffect(() => {
-    async function loadCategories() {
-      const res = await fetch("/api/categories");
-      const data = await res.json();
-      setCategories(data);
+    async function loadPageData() {
+      try {
+        const response = await fetch("/api/matches");
+        const data = await response.json();
+
+        setMatches(data);
+
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+
+        if (!user) return;
+
+        const { data: savedPredictions } = await supabase
+          .from("predictions_dev")
+          .select("match_id, home_score, away_score")
+          .eq("user_id", user.id);
+
+        const predictionsMap: Record<number, Prediction> = {};
+
+        savedPredictions?.forEach((item) => {
+          predictionsMap[item.match_id] = {
+            homeScore: String(item.home_score),
+            awayScore: String(item.away_score),
+          };
+        });
+
+        setPredictions(predictionsMap);
+      } catch (error) {
+        console.error(error);
+      } finally {
+        setLoading(false);
+      }
     }
 
-    loadCategories();
-    loadUserPicks();
+    loadPageData();
   }, []);
 
-  async function savePick(categoryId: string, nomineeId: string) {
-    if (picksLocked) {
-      alert("La quiniela ya está cerrada.");
+  const filteredMatches = useMemo(() => {
+    return matches.filter((match) =>
+      isMatchInCut(match, activeCut)
+    );
+  }, [matches, activeCut]);
+
+  const completedInFilter = filteredMatches.filter(
+    (match) => !!predictions[match.id]
+  ).length;
+
+  function updatePrediction(
+    matchId: number,
+    field: "homeScore" | "awayScore",
+    value: string
+  ) {
+    setPredictions((prev) => ({
+      ...prev,
+      [matchId]: {
+        homeScore: prev[matchId]?.homeScore ?? "",
+        awayScore: prev[matchId]?.awayScore ?? "",
+        [field]: value,
+      },
+    }));
+  }
+
+  async function savePrediction(matchId: number) {
+    const prediction = predictions[matchId];
+
+    if (!prediction?.homeScore || !prediction?.awayScore) {
+      alert("Captura ambos marcadores.");
       return;
     }
 
-    const { data: userData } = await supabase.auth.getUser();
-    const user = userData.user;
+    const match = matches.find((m) => m.id === matchId);
+
+    if (match && isMatchLocked(match)) {
+      alert("Este partido ya inició.");
+      return;
+    }
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
     if (!user) {
-      alert("Debes iniciar sesión");
+      alert("Debes iniciar sesión.");
       return;
     }
 
-    const { error } = await supabase.from("picks").upsert({
-      user_id: user.id,
-      category_id: categoryId,
-      nominee_id: nomineeId,
-    });
+    const { error } = await supabase
+      .from("predictions_dev")
+      .upsert(
+        {
+          user_id: user.id,
+          match_id: matchId,
+          home_score: Number(prediction.homeScore),
+          away_score: Number(prediction.awayScore),
+        },
+        {
+          onConflict: "user_id,match_id",
+        }
+      );
 
     if (error) {
-      console.error("Error guardando pick:", error);
-      alert("No se pudo guardar tu selección");
+      alert(error.message);
       return;
     }
 
-    setSelectedPicks((prev) => ({
-      ...prev,
-      [categoryId]: nomineeId,
-    }));
+    alert("Pronóstico guardado.");
   }
 
   return (
     <main
       style={{
-        maxWidth: 1100,
-        margin: "40px auto",
-        fontFamily: "sans-serif",
-        padding: "0 16px",
+        minHeight: "100vh",
+        background:
+          "linear-gradient(rgba(0,0,0,.78), rgba(0,0,0,.92)), url('/worldcup-bg.jpg')",
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        padding: "40px 16px",
         color: "white",
+        fontFamily: "sans-serif",
       }}
     >
-      <div
-        style={{
-          marginBottom: 24,
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          gap: 16,
-          flexWrap: "wrap",
-        }}
-      >
-        <h1 style={{ margin: 0 }}>Quiniela Oscars 2026</h1>
-
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-          <Link
-            href="/"
-            style={{
-              padding: "10px 16px",
-              borderRadius: 10,
-              border: "1px solid #444",
-              background: "#161616",
-              color: "white",
-              textDecoration: "none",
-              fontWeight: 600,
-            }}
-          >
-            Inicio
-          </Link>
-
-          <Link
-            href="/leaderboard"
-            style={{
-              padding: "10px 16px",
-              borderRadius: 10,
-              border: "1px solid #444",
-              background: "#161616",
-              color: "white",
-              textDecoration: "none",
-              fontWeight: 600,
-            }}
-          >
-            Ver tablero en vivo
-          </Link>
-
-          <button
-            onClick={signOut}
-            style={{
-              padding: "10px 16px",
-              borderRadius: 10,
-              border: "1px solid #444",
-              background: "#2a1414",
-              color: "white",
-              fontWeight: 600,
-              cursor: "pointer",
-            }}
-          >
-            Cerrar sesión
-          </button>
-        </div>
-      </div>
-
-      <div
-        style={{
-          position: "sticky",
-          top: 12,
-          zIndex: 50,
-          marginBottom: 24,
-          padding: "16px",
-          borderRadius: 14,
-          background: "rgba(0,0,0,0.72)",
-          backdropFilter: "blur(6px)",
-          border: "1px solid rgba(255,255,255,0.12)",
-          boxShadow: "0 8px 24px rgba(0,0,0,0.28)",
-        }}
-      >
+      <div style={{ maxWidth: 1200, margin: "0 auto" }}>
         <div
           style={{
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
-            gap: 12,
+            gap: 20,
             flexWrap: "wrap",
-            marginBottom: 14,
+            marginBottom: 30,
           }}
         >
-          <div style={{ fontWeight: 700, fontSize: 16 }}>
-            Progreso de selección
-          </div>
-
-          <div
-            style={{
-              fontSize: 14,
-              color: "#d1d5db",
-              fontWeight: 600,
-            }}
-          >
-            Picks completados: {completedCategories}/{totalCategories}
-          </div>
-        </div>
-
-        <div
-          style={{
-            display: "flex",
-            flexWrap: "wrap",
-            gap: 10,
-          }}
-        >
-          {categories.map((cat) => {
-            const isCompleted = !!selectedPicks[cat.id];
-
-            return (
-              <a
-                key={`jump-${cat.id}`}
-                href={`#cat-${cat.id}`}
-                style={{
-                  width: 36,
-                  height: 36,
-                  display: "inline-flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  borderRadius: 999,
-                  textDecoration: "none",
-                  fontWeight: 700,
-                  fontSize: 14,
-                  color: isCompleted ? "#052e16" : "white",
-                  background: isCompleted ? "#4ade80" : "#374151",
-                  border: isCompleted
-                    ? "1px solid #22c55e"
-                    : "1px solid rgba(255,255,255,0.12)",
-                }}
-                title={`${cat.sort_order}. ${cat.name}`}
-              >
-                {cat.sort_order}
-              </a>
-            );
-          })}
-        </div>
-      </div>
-
-      {picksLocked && (
-        <div
-          style={{
-            background: "#7f1d1d",
-            color: "white",
-            padding: "12px 16px",
-            marginBottom: 24,
-            borderRadius: 10,
-            border: "1px solid #ef4444",
-            fontWeight: 600,
-          }}
-        >
-          La quiniela está cerrada. Ya no se pueden modificar picks.
-        </div>
-      )}
-
-      {categories.map((cat) => (
-        <div id={`cat-${cat.id}`} key={cat.id} style={{ marginBottom: 40 }}>
-          <div
-            style={{
-              display: "inline-flex",
-              flexDirection: "column",
-              gap: 4,
-              marginBottom: 12,
-              padding: "10px 16px",
-              borderRadius: 12,
-              background: "rgba(0,0,0,0.65)",
-              backdropFilter: "blur(4px)",
-              color: "white",
-              fontWeight: 700,
-              border: "1px solid rgba(255,255,255,0.15)",
-              letterSpacing: "0.3px",
-            }}
-          >
-            <span>🏆 {cat.sort_order}. {cat.name}</span>
-            <span
+          <div>
+            <div
               style={{
-                fontSize: 12,
-                color: "#facc15",
-                fontWeight: 700,
+                display: "inline-block",
+                padding: "8px 14px",
+                borderRadius: 999,
+                background: "limegreen",
+                color: "black",
+                fontWeight: 900,
+                marginBottom: 18,
+                fontSize: 13,
               }}
             >
-              Valor: {cat.points ?? 0} pts
-            </span>
+              🐾 PANTERAS DEL ICC
+            </div>
+
+            <h1
+              style={{
+                margin: 0,
+                fontSize: "clamp(40px, 6vw, 70px)",
+                lineHeight: 1,
+              }}
+            >
+              Quiniela Mundial 2026
+            </h1>
+
+            <p
+              style={{
+                color: "lightgray",
+                marginTop: 18,
+                maxWidth: 760,
+                lineHeight: 1.6,
+                fontSize: 18,
+              }}
+            >
+              Captura tus pronósticos antes del inicio de cada partido y pelea
+              por los cortes semanales y el campeonato general.
+            </p>
           </div>
 
+          <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+            <Link
+              href="/"
+              style={secondaryButton}
+            >
+              Inicio
+            </Link>
+
+            <Link
+              href="/leaderboard"
+              style={primaryButton}
+            >
+              Ver leaderboard
+            </Link>
+          </div>
+        </div>
+
+        <section style={filterCard}>
           <div
             style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
-              gap: 16,
-              marginTop: 16,
+              display: "flex",
+              gap: 12,
+              flexWrap: "wrap",
+              marginBottom: 18,
             }}
           >
-            {cat.nominees.map((n) => {
-              const isPicked = selectedPicks[cat.id] === n.id;
-              const isWinner = cat.winner_nominee_id === n.id;
-              const hasWinner = !!cat.winner_nominee_id;
-              const isCorrect = isPicked && isWinner;
-              const isWrong = isPicked && hasWinner && !isWinner;
-              const hasImage = !!n.image_url && n.image_url.trim() !== "";
-
-              let borderColor = "1px solid #444";
-              let backgroundColor = "#111";
-
-              if (isCorrect) {
-                borderColor = "2px solid #22c55e";
-                backgroundColor = "#13261a";
-              } else if (isWrong) {
-                borderColor = "2px solid #ef4444";
-                backgroundColor = "#2a1414";
-              } else if (isWinner) {
-                borderColor = "2px solid #facc15";
-                backgroundColor = "#2a2410";
-              } else if (isPicked) {
-                borderColor = "2px solid #22c55e";
-                backgroundColor = "#1a2e22";
-              }
+            {(Object.keys(cuts) as CutFilter[]).map((cutKey) => {
+              const active = activeCut === cutKey;
 
               return (
-                <label
-                  key={n.id}
+                <button
+                  key={cutKey}
+                  onClick={() => setActiveCut(cutKey)}
                   style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    gap: 12,
-                    cursor: picksLocked ? "not-allowed" : "pointer",
-                    padding: 12,
-                    borderRadius: 12,
-                    border: borderColor,
-                    background: backgroundColor,
-                    opacity: picksLocked ? 0.95 : 1,
+                    padding: "12px 18px",
+                    borderRadius: 999,
+                    border: active
+                      ? "1px solid limegreen"
+                      : "1px solid rgba(255,255,255,0.15)",
+                    background: active
+                      ? "limegreen"
+                      : "rgba(255,255,255,0.04)",
+                    color: active ? "black" : "white",
+                    fontWeight: 800,
+                    cursor: "pointer",
                   }}
                 >
-                  <input
-                  type="radio"
-                  name={cat.id}
-                  value={n.id}
-                  checked={isPicked}
-                  disabled={picksLocked}
-                  onChange={() => savePick(cat.id, n.id)}
-                  style={{ display: "none" }}
-                />
-
-                  <div style={{ position: "relative" }}>
-                    {hasImage ? (
-                      <Image
-                        src={n.image_url as string}
-                        alt={n.label}
-                        width={180}
-                        height={270}
-                        style={{
-                          objectFit: "cover",
-                          borderRadius: 4,
-                          border: "1px solid #444",
-                          display: "block",
-                        }}
-                      />
-                    ) : (
-                      <div
-                        style={{
-                          width: 180,
-                          height: 270,
-                          borderRadius: 4,
-                          background: "#1f1f1f",
-                          border: "1px solid #444",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          color: "#aaa",
-                          fontSize: 12,
-                          fontWeight: 600,
-                        }}
-                      >
-                        No poster
-                      </div>
-                    )}
-
-                    {isWinner && (
-                      <div
-                        style={{
-                          position: "absolute",
-                          top: 8,
-                          left: 8,
-                          background: "#facc15",
-                          color: "#000",
-                          padding: "4px 8px",
-                          borderRadius: 6,
-                          fontSize: 12,
-                          fontWeight: "bold",
-                        }}
-                      >
-                        🏆 GANADOR
-                      </div>
-                    )}
-
-                    {isCorrect && (
-                      <div
-                        style={{
-                          position: "absolute",
-                          top: 8,
-                          right: 8,
-                          background: "#22c55e",
-                          color: "#000",
-                          padding: "4px 8px",
-                          borderRadius: 6,
-                          fontSize: 12,
-                          fontWeight: "bold",
-                        }}
-                      >
-                        ✅ ACERTASTE
-                      </div>
-                    )}
-
-                    {!hasWinner && isPicked && (
-                      <div
-                        style={{
-                          position: "absolute",
-                          top: 8,
-                          right: 8,
-                          background: "#22c55e",
-                          color: "#000",
-                          padding: "4px 8px",
-                          borderRadius: 6,
-                          fontSize: 12,
-                          fontWeight: "bold",
-                        }}
-                      >
-                        ✓ PICK
-                      </div>
-                    )}
-
-                    {isWrong && (
-                      <div
-                        style={{
-                          position: "absolute",
-                          top: 8,
-                          right: 8,
-                          background: "#ef4444",
-                          color: "#fff",
-                          padding: "4px 8px",
-                          borderRadius: 6,
-                          fontSize: 12,
-                          fontWeight: "bold",
-                        }}
-                      >
-                        ❌ FALLASTE
-                      </div>
-                    )}
-                  </div>
-
-                  <div
-                    style={{
-                      display: "flex",
-                      flexDirection: "column",
-                      alignItems: "center",
-                      textAlign: "center",
-                    }}
-                  >
-                    <span style={{ fontWeight: 600 }}>{n.label}</span>
-
-                    {!hasWinner && isPicked && (
-                      <span
-                        style={{
-                          fontSize: 11,
-                          color: "#4ade80",
-                          fontWeight: "bold",
-                          marginTop: 4,
-                        }}
-                      >
-                        Tu pick
-                      </span>
-                    )}
-                  </div>
-                </label>
+                  {cuts[cutKey].label}
+                </button>
               );
             })}
           </div>
-        </div>
-      ))}
+
+          <div style={{ color: "lightgray", lineHeight: 1.6 }}>
+            {cuts[activeCut].description}
+          </div>
+
+          <div
+            style={{
+              marginTop: 14,
+              color: "gold",
+              fontWeight: 800,
+            }}
+          >
+            Pronósticos capturados: {completedInFilter}/
+            {filteredMatches.length}
+          </div>
+        </section>
+
+        {loading ? (
+          <div style={loadingCard}>
+            Cargando partidos...
+          </div>
+        ) : (
+          <section
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: 22,
+            }}
+          >
+            {filteredMatches.map((match) => {
+              const prediction = predictions[match.id];
+              const locked = isMatchLocked(match);
+
+              return (
+                <div
+                  key={match.id}
+                  style={{
+                    borderRadius: 28,
+                    overflow: "hidden",
+                    border: locked
+                      ? "1px solid rgba(255,165,0,0.35)"
+                      : "1px solid rgba(255,255,255,0.12)",
+                    background:
+                      "linear-gradient(135deg, rgba(255,255,255,0.05), rgba(0,0,0,0.88))",
+                    backdropFilter: "blur(10px)",
+                    boxShadow:
+                      "0 0 30px rgba(0,0,0,0.35)",
+                    opacity: locked ? 0.72 : 1,
+                  }}
+                >
+                  <div
+                    style={{
+                      padding: 24,
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        gap: 12,
+                        flexWrap: "wrap",
+                        marginBottom: 18,
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 10,
+                          padding: "8px 14px",
+                          borderRadius: 999,
+                          background: "rgba(255,215,0,0.12)",
+                          color: "gold",
+                          fontWeight: 800,
+                          fontSize: 13,
+                        }}
+                      >
+                        {match.group}
+                      </div>
+
+                      <div
+                        style={{
+                          color: locked ? "orange" : "limegreen",
+                          fontWeight: 800,
+                          fontSize: 13,
+                        }}
+                      >
+                        {locked ? "PARTIDO BLOQUEADO" : "DISPONIBLE"}
+                      </div>
+                    </div>
+
+                    <div
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns:
+                          "1fr auto 1fr",
+                        alignItems: "center",
+                        gap: 18,
+                      }}
+                    >
+                      <TeamSide
+                        name={match.home}
+                        flag={match.homeFlag}
+                        align="right"
+                      />
+
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 14,
+                        }}
+                      >
+                        <input
+                          type="number"
+                          min="0"
+                          disabled={locked}
+                          value={prediction?.homeScore ?? ""}
+                          onChange={(e) =>
+                            updatePrediction(
+                              match.id,
+                              "homeScore",
+                              e.target.value
+                            )
+                          }
+                          style={scoreInput}
+                        />
+
+                        <div
+                          style={{
+                            fontSize: 28,
+                            fontWeight: 900,
+                          }}
+                        >
+                          -
+                        </div>
+
+                        <input
+                          type="number"
+                          min="0"
+                          disabled={locked}
+                          value={prediction?.awayScore ?? ""}
+                          onChange={(e) =>
+                            updatePrediction(
+                              match.id,
+                              "awayScore",
+                              e.target.value
+                            )
+                          }
+                          style={scoreInput}
+                        />
+                      </div>
+
+                      <TeamSide
+                        name={match.away}
+                        flag={match.awayFlag}
+                        align="left"
+                      />
+                    </div>
+
+                    <div
+                      style={{
+                        marginTop: 22,
+                        paddingTop: 18,
+                        borderTop:
+                          "1px solid rgba(255,255,255,0.08)",
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        gap: 18,
+                        flexWrap: "wrap",
+                      }}
+                    >
+                      <div>
+                        <div
+                          style={{
+                            fontWeight: 800,
+                            marginBottom: 6,
+                          }}
+                        >
+                          Partido #{match.matchNumber}
+                        </div>
+
+                        <div
+                          style={{
+                            color: "lightgray",
+                            fontSize: 14,
+                          }}
+                        >
+                          {match.date} · {match.time} ·{" "}
+                          {match.city}
+                        </div>
+
+                        <div
+                          style={{
+                            color: "darkgray",
+                            fontSize: 13,
+                            marginTop: 6,
+                          }}
+                        >
+                          {match.stadium}
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={() =>
+                          savePrediction(match.id)
+                        }
+                        disabled={locked}
+                        style={{
+                          padding: "14px 22px",
+                          borderRadius: 14,
+                          border: "none",
+                          background: locked
+                            ? "dimgray"
+                            : "linear-gradient(135deg, limegreen, #7CFC00)",
+                          color: "black",
+                          fontWeight: 900,
+                          cursor: locked
+                            ? "not-allowed"
+                            : "pointer",
+                          minWidth: 160,
+                          boxShadow: locked
+                            ? "none"
+                            : "0 0 20px rgba(50,205,50,0.35)",
+                        }}
+                      >
+                        {locked
+                          ? "Bloqueado"
+                          : "Guardar pronóstico"}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </section>
+        )}
+      </div>
     </main>
   );
 }
+
+function TeamSide({
+  name,
+  flag,
+  align,
+}: {
+  name: string;
+  flag: string;
+  align: "left" | "right";
+}) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection:
+          align === "right" ? "row-reverse" : "row",
+        alignItems: "center",
+        gap: 16,
+        textAlign: align,
+      }}
+    >
+      <img
+        src={`https://flagcdn.com/w80/${flag}.png`}
+        alt={name}
+        style={{
+          width: 64,
+          height: 48,
+          objectFit: "cover",
+          borderRadius: 10,
+          border: "1px solid rgba(255,255,255,0.12)",
+        }}
+      />
+
+      <div
+        style={{
+          fontSize: "clamp(18px, 2vw, 28px)",
+          fontWeight: 900,
+        }}
+      >
+        {name}
+      </div>
+    </div>
+  );
+}
+
+const scoreInput: React.CSSProperties = {
+  width: 82,
+  height: 82,
+  borderRadius: 18,
+  border: "1px solid rgba(255,255,255,0.14)",
+  background: "rgba(0,0,0,0.72)",
+  color: "white",
+  fontSize: 34,
+  fontWeight: 900,
+  textAlign: "center",
+  outline: "none",
+};
+
+const primaryButton: React.CSSProperties = {
+  padding: "14px 20px",
+  borderRadius: 14,
+  background: "linear-gradient(135deg, limegreen, #7CFC00)",
+  color: "black",
+  textDecoration: "none",
+  fontWeight: 900,
+};
+
+const secondaryButton: React.CSSProperties = {
+  padding: "14px 20px",
+  borderRadius: 14,
+  border: "1px solid rgba(255,255,255,0.16)",
+  background: "rgba(0,0,0,0.72)",
+  color: "white",
+  textDecoration: "none",
+  fontWeight: 800,
+};
+
+const filterCard: React.CSSProperties = {
+  padding: 24,
+  borderRadius: 24,
+  background: "rgba(0,0,0,0.72)",
+  border: "1px solid rgba(255,255,255,0.1)",
+  marginBottom: 30,
+};
+
+const loadingCard: React.CSSProperties = {
+  padding: 50,
+  borderRadius: 24,
+  background: "rgba(0,0,0,0.72)",
+  textAlign: "center",
+};

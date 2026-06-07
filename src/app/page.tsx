@@ -1,144 +1,431 @@
-"use client";
-
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { supabaseBrowser } from "@/lib/supabaseBrowser";
-import { isAdmin } from "@/lib/admin";
 
-export default function Home() {
-  const supabase = supabaseBrowser();
+type LeaderboardRow = {
+  user_id?: string;
+  display_name?: string | null;
+  total_points?: number | null;
+  exact_scores?: number | null;
+  position?: number | null;
+};
 
-  const [loadingUser, setLoadingUser] = useState(true);
-  const [userEmail, setUserEmail] = useState<string | null>(null);
+async function getMiniLeaderboard(): Promise<LeaderboardRow[]> {
+  try {
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
 
-  useEffect(() => {
-    let mounted = true;
-
-    async function loadUser() {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (!mounted) return;
-
-      setUserEmail(user?.email ?? null);
-      setLoadingUser(false);
-    }
-
-    loadUser();
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUserEmail(session?.user?.email ?? null);
-      setLoadingUser(false);
+    const res = await fetch(`${baseUrl}/api/leaderboard`, {
+      cache: "no-store",
     });
 
-    return () => {
-      mounted = false;
-      subscription.unsubscribe();
-    };
-  }, [supabase]);
+    if (!res.ok) return [];
 
-  const canSeeAdmin = isAdmin(userEmail);
+    const data = await res.json();
+
+    return Array.isArray(data) ? data.slice(0, 5) : [];
+  } catch {
+    return [];
+  }
+}
+
+export default async function HomePage() {
+  const miniLeaderboard = await getMiniLeaderboard();
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-black text-white">
-      <header className="absolute top-0 left-0 z-20 flex w-full justify-end gap-4 p-6">
-        {userEmail ? (
-          <>
-            <span className="text-sm opacity-80">{userEmail}</span>
+    <main
+      style={{
+        minHeight: "100vh",
+        background:
+          "linear-gradient(rgba(0,0,0,0.72), rgba(0,0,0,0.88)), url('/worldcup-bg.jpg')",
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        color: "white",
+        fontFamily: "sans-serif",
+        padding: "40px 20px",
+      }}
+    >
+      <section style={{ maxWidth: 1100, margin: "0 auto" }}>
+        <div
+          style={{
+            display: "inline-block",
+            padding: "8px 14px",
+            borderRadius: 999,
+            background: "darkgreen",
+            color: "white",
+            fontSize: 13,
+            fontWeight: 800,
+            marginBottom: 26,
+          }}
+        >
+          PANTERAS DEL ICC · QUINIELA OFICIAL
+        </div>
 
-            <button
-              onClick={async () => {
-                await supabase.auth.signOut();
-                window.location.reload();
-              }}
-              className="rounded-lg border border-white/30 px-3 py-1 text-sm transition hover:bg-white/10"
-            >
-              Cerrar sesión
-            </button>
-          </>
-        ) : (
+        <h1
+          style={{
+            fontSize: "clamp(44px, 8vw, 86px)",
+            lineHeight: 1,
+            margin: "0 0 22px",
+            letterSpacing: "-2px",
+          }}
+        >
+          Quiniela Mundial 2026
+        </h1>
+
+        <p
+          style={{
+            maxWidth: 760,
+            fontSize: 21,
+            lineHeight: 1.6,
+            color: "lightgray",
+            marginBottom: 34,
+          }}
+        >
+          Captura tus pronósticos de la fase de grupos, compite por cortes
+          semanales y pelea por el campeonato general de la quiniela.
+        </p>
+
+        <div
+          style={{
+            display: "flex",
+            gap: 14,
+            flexWrap: "wrap",
+            marginBottom: 48,
+          }}
+        >
+          <Link
+            href="/quiniela"
+            style={{
+              padding: "15px 24px",
+              borderRadius: 12,
+              background: "limegreen",
+              color: "black",
+              textDecoration: "none",
+              fontWeight: 900,
+            }}
+          >
+            Capturar pronósticos
+          </Link>
+
+          <Link
+            href="/leaderboard"
+            style={{
+              padding: "15px 24px",
+              borderRadius: 12,
+              background: "black",
+              color: "white",
+              border: "1px solid gray",
+              textDecoration: "none",
+              fontWeight: 800,
+            }}
+          >
+            Ver tablero
+          </Link>
+
           <Link
             href="/login"
-            className="rounded-lg border border-white/30 px-3 py-1 text-sm transition hover:bg-white/10"
+            style={{
+              padding: "15px 24px",
+              borderRadius: 12,
+              background: "black",
+              color: "white",
+              border: "1px solid gray",
+              textDecoration: "none",
+              fontWeight: 800,
+            }}
           >
             Iniciar sesión
           </Link>
-        )}
-      </header>
+        </div>
 
-      <div className="absolute inset-0">
-        <iframe
-          className="h-full w-full scale-[1.35] md:scale-[1.15]"
-          src="https://www.youtube-nocookie.com/embed/Rpg_wNgr3UQ?autoplay=1&mute=1&controls=0&loop=1&playlist=Rpg_wNgr3UQ&rel=0&modestbranding=1&playsinline=1"
-          title="Oscars background video"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-          referrerPolicy="strict-origin-when-cross-origin"
-          allowFullScreen
-        />
-      </div>
-
-      <div className="absolute inset-0 bg-black/40" />
-      <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-black/20 to-black/50" />
-
-      <section className="relative z-10 flex min-h-screen items-start pt-32">
-        <div className="mx-auto w-full max-w-7xl px-6 py-16 md:px-10">
-          <div className="max-w-3xl">
-            <p className="text-sm uppercase tracking-[0.45em] text-amber-300">
-              Oscars 2026
-            </p>
-
-            <h1 className="mt-6 text-5xl font-bold leading-[1.05] md:text-7xl">
-              Quiniela Oscars 2026
-            </h1>
-
-            <p className="mt-6 max-w-2xl text-lg leading-8 text-neutral-200 md:text-xl">
-              Haz tus picks antes de la ceremonia, sigue el tablero en vivo y
-              prepara el control del evento desde una sola aplicación.
-            </p>
-
-            {!loadingUser && !userEmail && (
-              <div className="mt-10">
-                <Link
-                  href="/login"
-                  className="inline-flex items-center justify-center rounded-2xl bg-amber-400 px-6 py-4 text-base font-semibold text-black transition hover:bg-amber-300"
-                >
-                  Iniciar sesión con Google
-                </Link>
+        <section
+          style={{
+            padding: 26,
+            borderRadius: 22,
+            background: "rgba(0,0,0,0.82)",
+            border: "1px solid rgba(255,255,255,0.18)",
+            marginBottom: 46,
+            boxShadow: "0 20px 60px rgba(0,0,0,0.35)",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              gap: 18,
+              alignItems: "center",
+              flexWrap: "wrap",
+              marginBottom: 18,
+            }}
+          >
+            <div>
+              <div
+                style={{
+                  color: "gold",
+                  fontWeight: 900,
+                  fontSize: 13,
+                  letterSpacing: 1,
+                  marginBottom: 6,
+                }}
+              >
+                TABLA GENERAL
               </div>
-            )}
+              <h2 style={{ margin: 0 }}>Top 5 de la quiniela</h2>
+            </div>
 
-            {!loadingUser && userEmail && (
-              <div className="mt-10 flex flex-col gap-4 sm:flex-row sm:flex-wrap">
-                <Link
-                  href="/quiniela"
-                  className="inline-flex items-center justify-center rounded-2xl bg-amber-400 px-6 py-4 text-base font-semibold text-black transition hover:bg-amber-300"
-                >
-                  Ir a la Quiniela
-                </Link>
+            <Link
+              href="/leaderboard"
+              style={{
+                padding: "11px 16px",
+                borderRadius: 12,
+                background: "limegreen",
+                color: "black",
+                textDecoration: "none",
+                fontWeight: 900,
+              }}
+            >
+              Ver tabla completa
+            </Link>
+          </div>
 
-                <Link
-                  href="/leaderboard"
-                  className="inline-flex items-center justify-center rounded-2xl border border-white/20 bg-white/10 px-6 py-4 text-base font-semibold text-white backdrop-blur-sm transition hover:bg-white/15"
-                >
-                  Ver Tablero
-                </Link>
+          {miniLeaderboard.length === 0 ? (
+            <p style={{ color: "lightgray", margin: 0, lineHeight: 1.5 }}>
+              Todavía no hay puntos registrados. Cuando se capturen resultados,
+              aquí aparecerán los líderes.
+            </p>
+          ) : (
+            <div style={{ display: "grid", gap: 10 }}>
+              {miniLeaderboard.map((player, index) => {
+                const position = player.position ?? index + 1;
 
-                {canSeeAdmin && (
-                  <Link
-                    href="/admin"
-                    className="inline-flex items-center justify-center rounded-2xl border border-emerald-400/40 bg-emerald-400/15 px-6 py-4 text-base font-semibold text-emerald-200 backdrop-blur-sm transition hover:bg-emerald-400/20"
+                return (
+                  <div
+                    key={player.user_id ?? `${player.display_name}-${index}`}
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "56px 1fr auto",
+                      gap: 14,
+                      alignItems: "center",
+                      padding: "14px 16px",
+                      borderRadius: 16,
+                      background:
+                        position === 1
+                          ? "linear-gradient(90deg, rgba(255,215,0,0.24), rgba(105,105,105,0.55))"
+                          : "rgba(105,105,105,0.65)",
+                      border:
+                        position === 1
+                          ? "1px solid rgba(255,215,0,0.55)"
+                          : "1px solid rgba(255,255,255,0.08)",
+                    }}
                   >
-                    Admin
-                  </Link>
-                )}
-              </div>
-            )}
+                    <div
+                      style={{
+                        width: 40,
+                        height: 40,
+                        borderRadius: 999,
+                        background: position === 1 ? "gold" : "black",
+                        color: position === 1 ? "black" : "white",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontWeight: 900,
+                      }}
+                    >
+                      #{position}
+                    </div>
+
+                    <div>
+                      <div style={{ fontWeight: 900 }}>
+                        {player.display_name || "Participante"}
+                      </div>
+                      <div style={{ color: "lightgray", fontSize: 13 }}>
+                        Exactos: {player.exact_scores ?? 0}
+                      </div>
+                    </div>
+
+                    <div
+                      style={{
+                        textAlign: "right",
+                        fontWeight: 900,
+                        fontSize: 22,
+                      }}
+                    >
+                      {player.total_points ?? 0}
+                      <div
+                        style={{
+                          color: "lightgray",
+                          fontSize: 12,
+                          fontWeight: 700,
+                        }}
+                      >
+                        pts
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </section>
+
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+            gap: 18,
+            marginBottom: 46,
+          }}
+        >
+          <div style={cardStyle}>
+            <div style={goldLabelStyle}>Premio general</div>
+            <h2 style={{ margin: "0 0 8px", fontSize: 34 }}>$6,000</h2>
+            <p style={mutedTextStyle}>
+              Para el campeón general de la quiniela.
+            </p>
+          </div>
+
+          <div style={cardStyle}>
+            <div style={goldLabelStyle}>Subcampeón</div>
+            <h2 style={{ margin: "0 0 8px", fontSize: 34 }}>$3,000</h2>
+            <p style={mutedTextStyle}>
+              Premio para el segundo lugar general.
+            </p>
+          </div>
+
+          <div style={cardStyle}>
+            <div style={goldLabelStyle}>Cortes semanales</div>
+            <h2 style={{ margin: "0 0 8px", fontSize: 34 }}>$2,000</h2>
+            <p style={mutedTextStyle}>
+              Premio semanal para el líder de cada corte.
+            </p>
           </div>
         </div>
+
+        <section style={sectionStyle}>
+          <h2 style={{ marginTop: 0 }}>Cómo funciona</h2>
+
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+              gap: 18,
+            }}
+          >
+            {[
+              {
+                step: "1",
+                title: "Pronostica",
+                text: "Captura marcador local y visitante antes del inicio de cada partido.",
+              },
+              {
+                step: "2",
+                title: "Suma puntos",
+                text: "Marcador exacto da 3 puntos. Resultado correcto da 1 punto.",
+              },
+              {
+                step: "3",
+                title: "Compite por cortes",
+                text: "Cada semana se paga al líder del periodo. Si hay empate, se divide.",
+              },
+              {
+                step: "4",
+                title: "Busca el campeonato",
+                text: "Al final de fase de grupos se define campeón y subcampeón general.",
+              },
+            ].map((item) => (
+              <div key={item.step} style={softCardStyle}>
+                <div
+                  style={{
+                    width: 34,
+                    height: 34,
+                    borderRadius: 999,
+                    background: "limegreen",
+                    color: "black",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontWeight: 900,
+                    marginBottom: 12,
+                  }}
+                >
+                  {item.step}
+                </div>
+
+                <h3 style={{ margin: "0 0 8px" }}>{item.title}</h3>
+                <p style={{ margin: 0, color: "lightgray", lineHeight: 1.5 }}>
+                  {item.text}
+                </p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section style={{ ...sectionStyle, marginBottom: 0 }}>
+          <h2 style={{ marginTop: 0 }}>Cortes semanales</h2>
+
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+              gap: 16,
+            }}
+          >
+            {[
+              {
+                title: "Corte 1",
+                dates: "11 al 14 de junio",
+                pay: "Pago lunes 15",
+              },
+              {
+                title: "Corte 2",
+                dates: "15 al 21 de junio",
+                pay: "Pago lunes 22",
+              },
+              {
+                title: "Corte 3",
+                dates: "22 al 27 de junio",
+                pay: "Pago lunes 29",
+              },
+            ].map((cut) => (
+              <div key={cut.title} style={softCardStyle}>
+                <div style={goldLabelStyle}>{cut.title}</div>
+                <h3 style={{ margin: "8px 0" }}>{cut.dates}</h3>
+                <p style={{ color: "lightgray", margin: 0 }}>{cut.pay}</p>
+              </div>
+            ))}
+          </div>
+        </section>
       </section>
     </main>
   );
 }
+
+const sectionStyle = {
+  padding: 26,
+  borderRadius: 22,
+  background: "rgba(0,0,0,0.82)",
+  border: "1px solid rgba(255,255,255,0.18)",
+  marginBottom: 46,
+} satisfies React.CSSProperties;
+
+const cardStyle = {
+  padding: 22,
+  borderRadius: 20,
+  background: "rgba(0,0,0,0.82)",
+  border: "1px solid rgba(255,255,255,0.18)",
+} satisfies React.CSSProperties;
+
+const softCardStyle = {
+  padding: 18,
+  borderRadius: 16,
+  background: "rgba(105,105,105,0.65)",
+  border: "1px solid rgba(255,255,255,0.08)",
+} satisfies React.CSSProperties;
+
+const goldLabelStyle = {
+  color: "gold",
+  fontWeight: 900,
+  marginBottom: 10,
+} satisfies React.CSSProperties;
+
+const mutedTextStyle = {
+  color: "lightgray",
+  margin: 0,
+} satisfies React.CSSProperties;

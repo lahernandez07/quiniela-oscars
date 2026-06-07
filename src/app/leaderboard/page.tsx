@@ -1,302 +1,345 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
-import { supabaseBrowser } from "@/lib/supabaseBrowser";
+import { useEffect, useState } from "react";
 
-type ScoreRow = {
+type LeaderboardRow = {
   user_id: string;
-  name: string;
-  score: number;
+  display_name: string;
+  total_points: number;
+  exact_scores: number;
 };
 
+type LeaderboardCut = "general" | "1" | "2" | "3";
+
 export default function LeaderboardPage() {
-  const supabase = supabaseBrowser();
-
-  const [rows, setRows] = useState<ScoreRow[]>([]);
+  const [rows, setRows] = useState<LeaderboardRow[]>([]);
   const [loading, setLoading] = useState(true);
-
-  const [leader, setLeader] = useState<string | null>(null);
-  const [newLeader, setNewLeader] = useState<string | null>(null);
-
-  async function loadLeaderboard() {
-    const res = await fetch("/api/leaderboard", {
-      cache: "no-store",
-    });
-
-    const data = await res.json();
-
-    if (res.ok) {
-      const currentLeader = data[0]?.name;
-
-      if (leader && currentLeader !== leader) {
-        setNewLeader(currentLeader);
-
-        setTimeout(() => {
-          setNewLeader(null);
-        }, 4000);
-      }
-
-      setLeader(currentLeader);
-      setRows(data);
-    }
-
-    setLoading(false);
-  }
+  const [activeCut, setActiveCut] = useState<LeaderboardCut>("general");
 
   useEffect(() => {
+    async function loadLeaderboard() {
+      try {
+        setLoading(true);
+
+        const query =
+          activeCut === "general"
+            ? "/api/leaderboard"
+            : `/api/leaderboard?cut=${activeCut}`;
+
+        const response = await fetch(query);
+        const json = await response.json();
+
+        const normalizedRows = Array.isArray(json)
+          ? json
+          : Array.isArray(json.data)
+            ? json.data
+            : Array.isArray(json.leaderboard)
+              ? json.leaderboard
+              : [];
+
+        setRows(normalizedRows);
+      } catch (error) {
+        console.error("Error loading leaderboard:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
     loadLeaderboard();
-
-    const channel = supabase
-      .channel("leaderboard-realtime")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "winners" },
-        () => loadLeaderboard()
-      )
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "picks" },
-        () => loadLeaderboard()
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
-
-  const maxScore = useMemo(() => {
-    if (rows.length === 0) return 1;
-    return Math.max(...rows.map((row) => row.score), 1);
-  }, [rows]);
-
-  function medalColor(position: number) {
-    if (position === 1)
-      return "linear-gradient(90deg,#FFD700,#FFC700)";
-
-    if (position === 2)
-      return "linear-gradient(90deg,#C0C0C0,#E5E5E5)";
-
-    if (position === 3)
-      return "linear-gradient(90deg,#CD7F32,#E0A96D)";
-
-    return "#22c55e";
-  }
+  }, [activeCut]);
 
   return (
     <main
       style={{
-        maxWidth: 960,
-        margin: "40px auto",
-        padding: "0 16px",
-        fontFamily: "sans-serif",
+        minHeight: "100vh",
+        background:
+          "linear-gradient(rgba(0,0,0,0.75), rgba(0,0,0,0.92)), url('/worldcup-bg.jpg')",
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        padding: "40px 16px",
         color: "white",
+        fontFamily: "sans-serif",
       }}
     >
-      <div
-        style={{
-          marginBottom: 24,
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          gap: 16,
-          flexWrap: "wrap",
-        }}
-      >
-        <h1 style={{ margin: 0 }}>Leaderboard</h1>
-
-        <Link
-          href="/quiniela"
-          style={{
-            padding: "10px 16px",
-            borderRadius: 10,
-            border: "1px solid #444",
-            background: "#161616",
-            color: "white",
-            textDecoration: "none",
-            fontWeight: 600,
-          }}
-        >
-          ← Volver a la quiniela
-        </Link>
-      </div>
-
-      {/* ANUNCIO NUEVO LIDER */}
-
-      {newLeader && (
+      <div style={{ maxWidth: 1100, margin: "0 auto" }}>
         <div
           style={{
-            background: "#1a1403",
-            border: "1px solid #FFD700",
-            padding: "14px 18px",
-            borderRadius: 10,
-            marginBottom: 20,
-            fontWeight: 700,
-            fontSize: 18,
-            textAlign: "center",
-            animation: "fadeIn 0.6s ease",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: 30,
+            flexWrap: "wrap",
+            gap: 14,
           }}
         >
-          🎉 Nuevo líder: {newLeader}
-        </div>
-      )}
-
-      {loading ? (
-        <p>Cargando ranking...</p>
-      ) : (
-        <>
-          {/* GRAFICA */}
-
-          <div
-            style={{
-              marginBottom: 24,
-              border: "1px solid #333",
-              borderRadius: 14,
-              background: "#111",
-              padding: 18,
-            }}
-          >
+          <div>
             <div
               style={{
-                marginBottom: 16,
-                fontSize: 18,
+                color: "gold",
+                fontWeight: 900,
+                fontSize: 13,
+                marginBottom: 6,
+                letterSpacing: 1,
+              }}
+            >
+              TABLA GENERAL
+            </div>
+
+            <h1
+              style={{
+                margin: 0,
+                fontSize: "clamp(34px, 5vw, 56px)",
+              }}
+            >
+              Leaderboard Mundial 2026
+            </h1>
+          </div>
+
+          <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+            <Link
+              href="/"
+              style={{
+                padding: "12px 18px",
+                borderRadius: 12,
+                background: "black",
+                color: "white",
+                border: "1px solid gray",
+                textDecoration: "none",
                 fontWeight: 700,
               }}
             >
-              Desempeño en vivo
-            </div>
+              Inicio
+            </Link>
 
-            <div
+            <Link
+              href="/quiniela"
               style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: 14,
+                padding: "12px 18px",
+                borderRadius: 12,
+                background: "limegreen",
+                color: "black",
+                textDecoration: "none",
+                fontWeight: 800,
               }}
             >
-              {rows.map((row, index) => {
-                const position = index + 1;
-                const isLeader = index === 0;
-                const width = `${(row.score / maxScore) * 100}%`;
+              Ir a Quiniela
+            </Link>
+          </div>
+        </div>
+
+        <div
+          style={{
+            display: "flex",
+            gap: 12,
+            flexWrap: "wrap",
+            marginBottom: 26,
+          }}
+        >
+          {[
+            { key: "general", label: "General" },
+            { key: "1", label: "Corte 1" },
+            { key: "2", label: "Corte 2" },
+            { key: "3", label: "Corte 3" },
+          ].map((tab) => {
+            const active = activeCut === tab.key;
+
+            return (
+              <button
+                key={tab.key}
+                onClick={() => setActiveCut(tab.key as LeaderboardCut)}
+                style={{
+                  padding: "12px 18px",
+                  borderRadius: 999,
+                  border: active
+                    ? "1px solid limegreen"
+                    : "1px solid rgba(255,255,255,0.12)",
+                  background: active ? "limegreen" : "rgba(0,0,0,0.72)",
+                  color: active ? "black" : "white",
+                  fontWeight: 800,
+                  cursor: "pointer",
+                }}
+              >
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {loading ? (
+          <div style={emptyCardStyle}>Cargando leaderboard...</div>
+        ) : rows.length === 0 ? (
+          <div style={emptyCardStyle}>
+            <h2 style={{ marginTop: 0 }}>Todavía no hay resultados</h2>
+            <p style={{ color: "lightgray", marginBottom: 0 }}>
+              Cuando comiencen a registrarse puntos aparecerá el ranking.
+            </p>
+          </div>
+        ) : (
+          <>
+            <section
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+                gap: 18,
+                marginBottom: 36,
+              }}
+            >
+              {rows.slice(0, 3).map((row, index) => {
+                const medals = ["🥇", "🥈", "🥉"];
 
                 return (
                   <div
-                    key={row.user_id}
+                    key={`${row.user_id}-podium-${index}`}
                     style={{
-                      display: "grid",
-                      gridTemplateColumns: "200px 1fr 60px",
-                      gap: 12,
-                      alignItems: "center",
-                      background: isLeader ? "#1a1403" : "transparent",
-                      borderRadius: 10,
-                      padding: isLeader ? 6 : 0,
-                      transition: "all 0.5s ease",
+                      padding: 24,
+                      borderRadius: 24,
+                      background:
+                        index === 0
+                          ? "linear-gradient(135deg, rgba(255,215,0,0.22), rgba(0,0,0,0.88))"
+                          : "rgba(0,0,0,0.82)",
+                      border:
+                        index === 0
+                          ? "1px solid rgba(255,215,0,0.45)"
+                          : "1px solid rgba(255,255,255,0.12)",
+                      boxShadow:
+                        index === 0
+                          ? "0 0 40px rgba(255,215,0,0.18)"
+                          : "none",
                     }}
                   >
-                    <div
-                      style={{
-                        fontSize: 14,
-                        fontWeight: 600,
-                        color: "#e5e7eb",
-                        whiteSpace: "nowrap",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                      }}
-                    >
-                      {row.name}
+                    <div style={{ fontSize: 42, marginBottom: 12 }}>
+                      {medals[index]}
                     </div>
 
                     <div
                       style={{
-                        width: "100%",
-                        height: 20,
-                        background: "#1f2937",
-                        borderRadius: 999,
-                        overflow: "hidden",
+                        fontSize: 22,
+                        fontWeight: 900,
+                        marginBottom: 10,
                       }}
                     >
-                      <div
-                        style={{
-                          width,
-                          height: "100%",
-                          background: medalColor(position),
-                          borderRadius: 999,
-                          transition:
-                            "width 0.8s cubic-bezier(.34,1.56,.64,1)",
-                        }}
-                      />
+                      {row.display_name}
                     </div>
 
-                    <div
-                      style={{
-                        textAlign: "right",
-                        fontWeight: 700,
-                        fontSize: 16,
-                      }}
-                    >
-                      {row.score}
+                    <div style={{ display: "flex", gap: 22 }}>
+                      <div>
+                        <div style={labelStyle}>PUNTOS</div>
+                        <div style={bigNumberStyle}>{row.total_points}</div>
+                      </div>
+
+                      <div>
+                        <div style={labelStyle}>EXACTOS</div>
+                        <div style={{ ...bigNumberStyle, color: "gold" }}>
+                          {row.exact_scores}
+                        </div>
+                      </div>
                     </div>
                   </div>
                 );
               })}
-            </div>
-          </div>
+            </section>
 
-          {/* TABLA */}
+            <section style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              {rows.map((row, index) => (
+                <div
+                  key={`${row.user_id}-${index}`}
+                  style={{
+                    padding: 22,
+                    borderRadius: 20,
+                    background:
+                      index === 0
+                        ? "linear-gradient(90deg, rgba(255,215,0,0.18), rgba(0,0,0,0.88))"
+                        : "rgba(0,0,0,0.82)",
+                    border:
+                      index === 0
+                        ? "1px solid rgba(255,215,0,0.45)"
+                        : "1px solid rgba(255,255,255,0.12)",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    flexWrap: "wrap",
+                    gap: 18,
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                    <div
+                      style={{
+                        width: 52,
+                        height: 52,
+                        borderRadius: 999,
+                        background: index === 0 ? "gold" : "rgba(255,255,255,0.1)",
+                        color: index === 0 ? "black" : "white",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontWeight: 900,
+                        fontSize: 20,
+                      }}
+                    >
+                      #{index + 1}
+                    </div>
 
-          <div
-            style={{
-              overflowX: "auto",
-              border: "1px solid #333",
-              borderRadius: 12,
-              background: "#111",
-            }}
-          >
-            <table
-              style={{
-                width: "100%",
-                borderCollapse: "collapse",
-              }}
-            >
-              <thead>
-                <tr style={{ background: "#1a1a1a" }}>
-                  <th style={{ padding: 14 }}>Posición</th>
-                  <th style={{ padding: 14 }}>Usuario</th>
-                  <th style={{ padding: 14 }}>Puntos</th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {rows.map((row, index) => {
-                  const position = index + 1;
-
-                  let medal = "";
-                  if (position === 1) medal = "🥇";
-                  if (position === 2) medal = "🥈";
-                  if (position === 3) medal = "🥉";
-
-                  return (
-                    <tr key={row.user_id}>
-                      <td style={{ padding: 14 }}>
-                        {medal} {position}
-                      </td>
-                      <td style={{ padding: 14 }}>{row.name}</td>
-                      <td
+                    <div>
+                      <div
                         style={{
-                          padding: 14,
-                          fontWeight: 700,
+                          fontSize: 20,
+                          fontWeight: 800,
+                          marginBottom: 4,
                         }}
                       >
-                        {row.score}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </>
-      )}
+                        {row.display_name}
+                      </div>
+
+                      <div style={{ fontSize: 13, color: "lightgray" }}>
+                        Competidor Mundial 2026
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ display: "flex", gap: 28, alignItems: "center" }}>
+                    <div style={{ textAlign: "center" }}>
+                      <div style={labelStyle}>PUNTOS</div>
+                      <div style={scoreStyle}>{row.total_points}</div>
+                    </div>
+
+                    <div style={{ textAlign: "center" }}>
+                      <div style={labelStyle}>EXACTOS</div>
+                      <div style={{ ...scoreStyle, color: "gold" }}>
+                        {row.exact_scores}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </section>
+          </>
+        )}
+      </div>
     </main>
   );
 }
+
+const emptyCardStyle: React.CSSProperties = {
+  padding: 50,
+  borderRadius: 24,
+  background: "rgba(0,0,0,0.82)",
+  border: "1px solid rgba(255,255,255,0.12)",
+  textAlign: "center",
+};
+
+const labelStyle: React.CSSProperties = {
+  color: "darkgray",
+  fontSize: 12,
+  marginBottom: 4,
+};
+
+const bigNumberStyle: React.CSSProperties = {
+  fontSize: 36,
+  fontWeight: 900,
+};
+
+const scoreStyle: React.CSSProperties = {
+  fontSize: 34,
+  fontWeight: 900,
+};
