@@ -3,58 +3,48 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
-type LeaderboardRow = {
+type SummaryRow = {
   user_id: string;
   display_name: string;
-  total_points: number;
+  cut1: number;
+  cut2: number;
+  cut3: number;
+  total: number;
   exact_scores: number;
 };
 
-type LeaderboardCut = "general" | "1" | "2" | "3";
-
 export default function LeaderboardPage() {
-  const [rows, setRows] = useState<LeaderboardRow[]>([]);
+  const [rows, setRows] = useState<SummaryRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeCut, setActiveCut] = useState<LeaderboardCut>("general");
 
   useEffect(() => {
     async function loadLeaderboard() {
       try {
         setLoading(true);
 
-        const query =
-          activeCut === "general"
-            ? "/api/leaderboard"
-            : `/api/leaderboard?cut=${activeCut}`;
+        const response = await fetch(
+          "/api/leaderboard?view=summary"
+        );
 
-        const response = await fetch(query);
         const json = await response.json();
 
-        const normalizedRows = Array.isArray(json)
-          ? json
-          : Array.isArray(json.data)
-            ? json.data
-            : Array.isArray(json.leaderboard)
-              ? json.leaderboard
-              : [];
-
-        setRows(normalizedRows);
+        setRows(Array.isArray(json) ? json : []);
       } catch (error) {
-        console.error("Error loading leaderboard:", error);
+        console.error(error);
       } finally {
         setLoading(false);
       }
     }
 
     loadLeaderboard();
-  }, [activeCut]);
+  }, []);
 
   return (
     <main
       style={{
         minHeight: "100vh",
         background:
-          "linear-gradient(rgba(0,0,0,0.75), rgba(0,0,0,0.92)), url('/worldcup-bg.jpg')",
+          "linear-gradient(rgba(0,0,0,0.78), rgba(0,0,0,0.92)), url('/worldcup-bg.jpg')",
         backgroundSize: "cover",
         backgroundPosition: "center",
         padding: "40px 16px",
@@ -62,15 +52,15 @@ export default function LeaderboardPage() {
         fontFamily: "sans-serif",
       }}
     >
-      <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+      <div style={{ maxWidth: 1300, margin: "0 auto" }}>
         <div
           style={{
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
-            marginBottom: 30,
+            gap: 20,
             flexWrap: "wrap",
-            gap: 14,
+            marginBottom: 30,
           }}
         >
           <div>
@@ -79,7 +69,7 @@ export default function LeaderboardPage() {
                 color: "gold",
                 fontWeight: 900,
                 fontSize: 13,
-                marginBottom: 6,
+                marginBottom: 8,
                 letterSpacing: 1,
               }}
             >
@@ -89,229 +79,202 @@ export default function LeaderboardPage() {
             <h1
               style={{
                 margin: 0,
-                fontSize: "clamp(34px, 5vw, 56px)",
+                fontSize: "clamp(38px, 6vw, 64px)",
               }}
             >
               Leaderboard Mundial 2026
             </h1>
-          </div>
 
-          <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-            <Link
-              href="/"
+            <p
               style={{
-                padding: "12px 18px",
-                borderRadius: 12,
-                background: "black",
-                color: "white",
-                border: "1px solid gray",
-                textDecoration: "none",
-                fontWeight: 700,
+                color: "lightgray",
+                marginTop: 14,
+                lineHeight: 1.6,
+                maxWidth: 700,
               }}
             >
+              Consulta el rendimiento acumulado por cortes semanales y el
+              puntaje total del torneo.
+            </p>
+          </div>
+
+          <div
+            style={{
+              display: "flex",
+              gap: 12,
+              flexWrap: "wrap",
+            }}
+          >
+            <Link href="/" style={secondaryButton}>
               Inicio
             </Link>
 
-            <Link
-              href="/quiniela"
-              style={{
-                padding: "12px 18px",
-                borderRadius: 12,
-                background: "limegreen",
-                color: "black",
-                textDecoration: "none",
-                fontWeight: 800,
-              }}
-            >
+            <Link href="/quiniela" style={primaryButton}>
               Ir a Quiniela
             </Link>
           </div>
         </div>
 
-        <div
-          style={{
-            display: "flex",
-            gap: 12,
-            flexWrap: "wrap",
-            marginBottom: 26,
-          }}
-        >
-          {[
-            { key: "general", label: "General" },
-            { key: "1", label: "Corte 1" },
-            { key: "2", label: "Corte 2" },
-            { key: "3", label: "Corte 3" },
-          ].map((tab) => {
-            const active = activeCut === tab.key;
-
-            return (
-              <button
-                key={tab.key}
-                onClick={() => setActiveCut(tab.key as LeaderboardCut)}
-                style={{
-                  padding: "12px 18px",
-                  borderRadius: 999,
-                  border: active
-                    ? "1px solid limegreen"
-                    : "1px solid rgba(255,255,255,0.12)",
-                  background: active ? "limegreen" : "rgba(0,0,0,0.72)",
-                  color: active ? "black" : "white",
-                  fontWeight: 800,
-                  cursor: "pointer",
-                }}
-              >
-                {tab.label}
-              </button>
-            );
-          })}
-        </div>
-
         {loading ? (
-          <div style={emptyCardStyle}>Cargando leaderboard...</div>
+          <div style={loadingCard}>
+            Cargando leaderboard...
+          </div>
         ) : rows.length === 0 ? (
-          <div style={emptyCardStyle}>
-            <h2 style={{ marginTop: 0 }}>Todavía no hay resultados</h2>
-            <p style={{ color: "lightgray", marginBottom: 0 }}>
-              Cuando comiencen a registrarse puntos aparecerá el ranking.
-            </p>
+          <div style={loadingCard}>
+            Todavía no hay resultados registrados.
           </div>
         ) : (
           <>
             <section
               style={{
                 display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+                gridTemplateColumns:
+                  "repeat(auto-fit, minmax(240px, 1fr))",
                 gap: 18,
-                marginBottom: 36,
+                marginBottom: 30,
               }}
             >
-              {rows.slice(0, 3).map((row, index) => {
-                const medals = ["🥇", "🥈", "🥉"];
-
-                return (
-                  <div
-                    key={`${row.user_id}-podium-${index}`}
-                    style={{
-                      padding: 24,
-                      borderRadius: 24,
-                      background:
-                        index === 0
-                          ? "linear-gradient(135deg, rgba(255,215,0,0.22), rgba(0,0,0,0.88))"
-                          : "rgba(0,0,0,0.82)",
-                      border:
-                        index === 0
-                          ? "1px solid rgba(255,215,0,0.45)"
-                          : "1px solid rgba(255,255,255,0.12)",
-                      boxShadow:
-                        index === 0
-                          ? "0 0 40px rgba(255,215,0,0.18)"
-                          : "none",
-                    }}
-                  >
-                    <div style={{ fontSize: 42, marginBottom: 12 }}>
-                      {medals[index]}
-                    </div>
-
-                    <div
-                      style={{
-                        fontSize: 22,
-                        fontWeight: 900,
-                        marginBottom: 10,
-                      }}
-                    >
-                      {row.display_name}
-                    </div>
-
-                    <div style={{ display: "flex", gap: 22 }}>
-                      <div>
-                        <div style={labelStyle}>PUNTOS</div>
-                        <div style={bigNumberStyle}>{row.total_points}</div>
-                      </div>
-
-                      <div>
-                        <div style={labelStyle}>EXACTOS</div>
-                        <div style={{ ...bigNumberStyle, color: "gold" }}>
-                          {row.exact_scores}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </section>
-
-            <section style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              {rows.map((row, index) => (
+              {rows.slice(0, 3).map((row, index) => (
                 <div
-                  key={`${row.user_id}-${index}`}
+                  key={row.user_id}
                   style={{
-                    padding: 22,
-                    borderRadius: 20,
+                    borderRadius: 24,
+                    padding: 24,
                     background:
                       index === 0
-                        ? "linear-gradient(90deg, rgba(255,215,0,0.18), rgba(0,0,0,0.88))"
-                        : "rgba(0,0,0,0.82)",
+                        ? "linear-gradient(135deg, rgba(255,215,0,0.22), rgba(0,0,0,0.88))"
+                        : "rgba(0,0,0,0.78)",
                     border:
                       index === 0
-                        ? "1px solid rgba(255,215,0,0.45)"
+                        ? "1px solid gold"
                         : "1px solid rgba(255,255,255,0.12)",
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    flexWrap: "wrap",
-                    gap: 18,
                   }}
                 >
-                  <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-                    <div
-                      style={{
-                        width: 52,
-                        height: 52,
-                        borderRadius: 999,
-                        background: index === 0 ? "gold" : "rgba(255,255,255,0.1)",
-                        color: index === 0 ? "black" : "white",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        fontWeight: 900,
-                        fontSize: 20,
-                      }}
-                    >
-                      #{index + 1}
-                    </div>
-
-                    <div>
-                      <div
-                        style={{
-                          fontSize: 20,
-                          fontWeight: 800,
-                          marginBottom: 4,
-                        }}
-                      >
-                        {row.display_name}
-                      </div>
-
-                      <div style={{ fontSize: 13, color: "lightgray" }}>
-                        Competidor Mundial 2026
-                      </div>
-                    </div>
+                  <div
+                    style={{
+                      color:
+                        index === 0
+                          ? "gold"
+                          : "lightgray",
+                      fontWeight: 900,
+                      marginBottom: 10,
+                    }}
+                  >
+                    #{index + 1}
                   </div>
 
-                  <div style={{ display: "flex", gap: 28, alignItems: "center" }}>
-                    <div style={{ textAlign: "center" }}>
-                      <div style={labelStyle}>PUNTOS</div>
-                      <div style={scoreStyle}>{row.total_points}</div>
-                    </div>
+                  <h2
+                    style={{
+                      marginTop: 0,
+                      marginBottom: 8,
+                    }}
+                  >
+                    {row.display_name}
+                  </h2>
 
-                    <div style={{ textAlign: "center" }}>
-                      <div style={labelStyle}>EXACTOS</div>
-                      <div style={{ ...scoreStyle, color: "gold" }}>
-                        {row.exact_scores}
-                      </div>
-                    </div>
+                  <div
+                    style={{
+                      fontSize: 42,
+                      fontWeight: 900,
+                      color: "limegreen",
+                    }}
+                  >
+                    {row.total}
+                  </div>
+
+                  <div
+                    style={{
+                      color: "lightgray",
+                      marginTop: 8,
+                    }}
+                  >
+                    Exactos: {row.exact_scores}
                   </div>
                 </div>
               ))}
+            </section>
+
+            <section
+              style={{
+                borderRadius: 26,
+                overflow: "hidden",
+                border: "1px solid rgba(255,255,255,0.12)",
+                background: "rgba(0,0,0,0.78)",
+                backdropFilter: "blur(10px)",
+              }}
+            >
+              <div
+                style={{
+                  overflowX: "auto",
+                }}
+              >
+                <table
+                  style={{
+                    width: "100%",
+                    borderCollapse: "collapse",
+                    minWidth: 900,
+                  }}
+                >
+                  <thead
+                    style={{
+                      background:
+                        "linear-gradient(135deg, limegreen, #7CFC00)",
+                      color: "black",
+                    }}
+                  >
+                    <tr>
+                      <th style={thStyle}>#</th>
+                      <th style={thStyle}>Participante</th>
+                      <th style={thStyle}>Corte 1</th>
+                      <th style={thStyle}>Corte 2</th>
+                      <th style={thStyle}>Corte 3</th>
+                      <th style={thStyle}>Total</th>
+                      <th style={thStyle}>Exactos</th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    {rows.map((row, index) => (
+                      <tr
+                        key={row.user_id}
+                        style={{
+                          borderBottom:
+                            "1px solid rgba(255,255,255,0.08)",
+                        }}
+                      >
+                        <td style={tdStyle}>
+                          <strong>#{index + 1}</strong>
+                        </td>
+
+                        <td style={tdStyle}>
+                          <strong>{row.display_name}</strong>
+                        </td>
+
+                        <td style={tdStyle}>{row.cut1}</td>
+
+                        <td style={tdStyle}>{row.cut2}</td>
+
+                        <td style={tdStyle}>{row.cut3}</td>
+
+                        <td
+                          style={{
+                            ...tdStyle,
+                            color: "limegreen",
+                            fontWeight: 900,
+                            fontSize: 22,
+                          }}
+                        >
+                          {row.total}
+                        </td>
+
+                        <td style={tdStyle}>
+                          {row.exact_scores}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </section>
           </>
         )}
@@ -320,26 +283,41 @@ export default function LeaderboardPage() {
   );
 }
 
-const emptyCardStyle: React.CSSProperties = {
+const thStyle: React.CSSProperties = {
+  padding: "18px 16px",
+  textAlign: "left",
+  fontSize: 14,
+  letterSpacing: 1,
+};
+
+const tdStyle: React.CSSProperties = {
+  padding: "18px 16px",
+  color: "white",
+};
+
+const primaryButton: React.CSSProperties = {
+  padding: "14px 22px",
+  borderRadius: 14,
+  background:
+    "linear-gradient(135deg, limegreen, #7CFC00)",
+  color: "black",
+  textDecoration: "none",
+  fontWeight: 900,
+};
+
+const secondaryButton: React.CSSProperties = {
+  padding: "14px 22px",
+  borderRadius: 14,
+  border: "1px solid rgba(255,255,255,0.12)",
+  background: "rgba(255,255,255,0.04)",
+  color: "white",
+  textDecoration: "none",
+  fontWeight: 800,
+};
+
+const loadingCard: React.CSSProperties = {
   padding: 50,
   borderRadius: 24,
-  background: "rgba(0,0,0,0.82)",
-  border: "1px solid rgba(255,255,255,0.12)",
+  background: "rgba(0,0,0,0.78)",
   textAlign: "center",
-};
-
-const labelStyle: React.CSSProperties = {
-  color: "darkgray",
-  fontSize: 12,
-  marginBottom: 4,
-};
-
-const bigNumberStyle: React.CSSProperties = {
-  fontSize: 36,
-  fontWeight: 900,
-};
-
-const scoreStyle: React.CSSProperties = {
-  fontSize: 34,
-  fontWeight: 900,
 };
