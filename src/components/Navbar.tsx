@@ -96,36 +96,32 @@ export default function Navbar() {
           </div>
         </Link>
 
-        <div
-          style={{
-            display: "flex",
-            gap: 12,
-            alignItems: "center",
-            flexWrap: "wrap",
-          }}
-        >
-          {user && (
-          <Link href="/" style={secondaryButton}>
-            Inicio
-          </Link>
-            )}
+        {user && (
+          <div
+            style={{
+              display: "flex",
+              gap: 12,
+              alignItems: "center",
+              flexWrap: "wrap",
+            }}
+          >
+            <Link href="/" style={secondaryButton}>
+              Inicio
+            </Link>
 
-          {user && (
-            <>
-              <Link href="/quiniela" style={primaryButton}>
-                Quiniela
-              </Link>
+            <Link href="/quiniela" style={primaryButton}>
+              Quiniela
+            </Link>
 
-              <Link href="/leaderboard" style={secondaryButton}>
-                Leaderboard
-              </Link>
+            <Link href="/leaderboard" style={secondaryButton}>
+              Leaderboard
+            </Link>
 
-              <button onClick={handleLogout} style={logoutButton}>
-                Cerrar sesión
-              </button>
-            </>
-          )}
-        </div>
+            <button onClick={handleLogout} style={logoutButton}>
+              Cerrar sesión
+            </button>
+          </div>
+        )}
       </div>
     </header>
   );
