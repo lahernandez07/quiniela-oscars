@@ -14,9 +14,48 @@ const CUTS = {
   "3": { start: "2026-06-22", end: "2026-06-27" },
 };
 
+function calculatePoints(prediction: any, result: any) {
+  if (
+    prediction.home_score === result.home_score &&
+    prediction.away_score === result.away_score
+  ) {
+    return {
+      points: 3,
+      exact: 1,
+    };
+  }
+
+  const predictionOutcome =
+    prediction.home_score > prediction.away_score
+      ? "home"
+      : prediction.home_score < prediction.away_score
+        ? "away"
+        : "draw";
+
+  const resultOutcome =
+    result.home_score > result.away_score
+      ? "home"
+      : result.home_score < result.away_score
+        ? "away"
+        : "draw";
+
+  if (predictionOutcome === resultOutcome) {
+    return {
+      points: 1,
+      exact: 0,
+    };
+  }
+
+  return {
+    points: 0,
+    exact: 0,
+  };
+}
+
 export async function GET(request: NextRequest) {
   try {
     const cut = request.nextUrl.searchParams.get("cut");
+    const view = request.nextUrl.searchParams.get("view");
 
     const filePath = path.join(
       process.cwd(),
@@ -27,18 +66,6 @@ export async function GET(request: NextRequest) {
 
     const file = fs.readFileSync(filePath, "utf8");
     const matches = JSON.parse(file);
-
-    let filteredMatches = matches;
-
-    if (cut && cut !== "general" && CUTS[cut as keyof typeof CUTS]) {
-      const selectedCut = CUTS[cut as keyof typeof CUTS];
-
-      filteredMatches = matches.filter((match: any) => {
-        return match.date >= selectedCut.start && match.date <= selectedCut.end;
-      });
-    }
-
-    const validMatchIds = filteredMatches.map((match: any) => match.id);
 
     const { data: predictions, error: predictionsError } = await supabase
       .from("predictions_dev")
@@ -72,6 +99,92 @@ export async function GET(request: NextRequest) {
         { status: 500 }
       );
     }
+
+    // SUMMARY VIEW
+    if (view === "summary") {
+      const summaryMap: Record<
+        string,
+        {
+          user_id: string;
+          display_name: string;
+          cut1: number;
+          cut2: number;
+          cut3: number;
+          total: number;
+          exact_scores: number;
+        }
+      > = {};
+
+      for (const prediction of predictions ?? []) {
+        const result = (results ?? []).find(
+          (item: any) => item.match_id === prediction.match_id
+        );
+
+        if (!result) continue;
+
+        const match = matches.find(
+          (item: any) => item.id === prediction.match_id
+        );
+
+        if (!match) continue;
+
+        const profile = (profiles ?? []).find(
+          (item: any) => item.id === prediction.user_id
+        );
+
+        if (!summaryMap[prediction.user_id]) {
+          summaryMap[prediction.user_id] = {
+            user_id: prediction.user_id,
+            display_name: profile?.name || "Participante",
+            cut1: 0,
+            cut2: 0,
+            cut3: 0,
+            total: 0,
+            exact_scores: 0,
+          };
+        }
+
+        const score = calculatePoints(prediction, result);
+
+        if (match.date >= CUTS["1"].start && match.date <= CUTS["1"].end) {
+          summaryMap[prediction.user_id].cut1 += score.points;
+        }
+
+        if (match.date >= CUTS["2"].start && match.date <= CUTS["2"].end) {
+          summaryMap[prediction.user_id].cut2 += score.points;
+        }
+
+        if (match.date >= CUTS["3"].start && match.date <= CUTS["3"].end) {
+          summaryMap[prediction.user_id].cut3 += score.points;
+        }
+
+        summaryMap[prediction.user_id].total += score.points;
+        summaryMap[prediction.user_id].exact_scores += score.exact;
+      }
+
+      const summaryLeaderboard = Object.values(summaryMap).sort((a, b) => {
+        if (b.total !== a.total) {
+          return b.total - a.total;
+        }
+
+        return b.exact_scores - a.exact_scores;
+      });
+
+      return NextResponse.json(summaryLeaderboard);
+    }
+
+    // NORMAL CUT VIEW
+    let filteredMatches = matches;
+
+    if (cut && cut !== "general" && CUTS[cut as keyof typeof CUTS]) {
+      const selectedCut = CUTS[cut as keyof typeof CUTS];
+
+      filteredMatches = matches.filter((match: any) => {
+        return match.date >= selectedCut.start && match.date <= selectedCut.end;
+      });
+    }
+
+    const validMatchIds = filteredMatches.map((match: any) => match.id);
 
     const filteredPredictions = (predictions ?? []).filter((prediction: any) =>
       validMatchIds.includes(prediction.match_id)
@@ -107,32 +220,10 @@ export async function GET(request: NextRequest) {
         };
       }
 
-      if (
-        prediction.home_score === result.home_score &&
-        prediction.away_score === result.away_score
-      ) {
-        leaderboardMap[prediction.user_id].total_points += 3;
-        leaderboardMap[prediction.user_id].exact_scores += 1;
-        continue;
-      }
+      const score = calculatePoints(prediction, result);
 
-      const predictionOutcome =
-        prediction.home_score > prediction.away_score
-          ? "home"
-          : prediction.home_score < prediction.away_score
-            ? "away"
-            : "draw";
-
-      const resultOutcome =
-        result.home_score > result.away_score
-          ? "home"
-          : result.home_score < result.away_score
-            ? "away"
-            : "draw";
-
-      if (predictionOutcome === resultOutcome) {
-        leaderboardMap[prediction.user_id].total_points += 1;
-      }
+      leaderboardMap[prediction.user_id].total_points += score.points;
+      leaderboardMap[prediction.user_id].exact_scores += score.exact;
     }
 
     const leaderboard = Object.values(leaderboardMap).sort((a, b) => {
