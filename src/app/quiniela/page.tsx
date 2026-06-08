@@ -34,19 +34,19 @@ const cuts = {
   },
   cut1: {
     label: "Semana 1",
-    description: "Semana 1 - 11 al 14 de junio · Pago lunes 15",
+    description: "Semana 1 · 11 al 14 junio · $1,500 1er lugar / $500 2do lugar - Pago lunes 15",
     start: "2026-06-11",
     end: "2026-06-14",
   },
   cut2: {
     label: "Semana 2",
-    description: "Semana 2 - 15 al 21 de junio · Pago lunes 22",
+    description: "Semana 2 - 15 al 21 de junio · $1,500 1er lugar / $500 2do lugar - Pago lunes 22",
     start: "2026-06-15",
     end: "2026-06-21",
   },
   cut3: {
     label: "Semana 3",
-    description: "Semana 3 - 22 al 27 de junio · Pago lunes 29",
+    description: "Semana 3 - 22 al 27 de junio · $1,500 1er lugar / $500 2do lugar - Pago lunes 29",
     start: "2026-06-22",
     end: "2026-06-27",
   },

@@ -184,10 +184,10 @@ export default function HomePage() {
             Premio para el segundo lugar general.
           </PrizeCard>
 
-          <PrizeCard title="Semanas" amount="$2,000">
-            Premio semanal para el líder de cada semana.
-          </PrizeCard>
-        </div>
+          <PrizeCard title="Premios semanales" amount="$2,000">
+            $1,500 para el 1er lugar y $500 para el 2do lugar de cada semana.
+              </PrizeCard>
+              </div>
 
         <section style={sectionStyle}>
           <h2 style={{ marginTop: 0 }}>Cómo funciona</h2>
