@@ -1,12 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
+
+const INACTIVITY_LIMIT = 60 * 60 * 1000; // 60 minutos
 
 export default function Navbar() {
   const supabase = supabaseBrowser();
   const [user, setUser] = useState<any>(null);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     async function loadUser() {
@@ -18,7 +21,56 @@ export default function Navbar() {
     }
 
     loadUser();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
+
+  useEffect(() => {
+    if (!user) return;
+
+    function resetTimer() {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+
+      timeoutRef.current = setTimeout(async () => {
+        await supabase.auth.signOut();
+        window.location.href = "/";
+      }, INACTIVITY_LIMIT);
+    }
+
+    const events = [
+      "mousemove",
+      "keydown",
+      "click",
+      "scroll",
+      "touchstart",
+    ];
+
+    events.forEach((event) => {
+      window.addEventListener(event, resetTimer);
+    });
+
+    resetTimer();
+
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+
+      events.forEach((event) => {
+        window.removeEventListener(event, resetTimer);
+      });
+    };
+  }, [user]);
 
   async function handleLogout() {
     await supabase.auth.signOut();
