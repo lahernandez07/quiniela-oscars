@@ -49,6 +49,9 @@ export default function AdminPage() {
   const [savingMatchId, setSavingMatchId] = useState<number | null>(null);
   const [savedMatchId, setSavedMatchId] = useState<number | null>(null);
 
+  const [syncing, setSyncing] = useState(false);
+  const [syncMessage, setSyncMessage] = useState("");
+
   useEffect(() => {
     async function checkUser() {
       const {
@@ -68,42 +71,44 @@ export default function AdminPage() {
   useEffect(() => {
     if (!isAdmin) return;
 
-    async function loadResults() {
-      try {
-        const response = await fetch("/api/results", {
-          cache: "no-store",
-        });
-
-        const data = await response.json();
-
-        setMatches(Array.isArray(data) ? data : []);
-
-        const map: Record<number, ResultInput> = {};
-
-        data.forEach((match: Match) => {
-          if (match.result) {
-            map[match.id] = {
-              homeScore: String(match.result.home_score),
-              awayScore: String(match.result.away_score),
-            };
-          } else {
-            map[match.id] = {
-              homeScore: "",
-              awayScore: "",
-            };
-          }
-        });
-
-        setResults(map);
-      } catch (error) {
-        console.error(error);
-      } finally {
-        setLoading(false);
-      }
-    }
-
     loadResults();
   }, [isAdmin]);
+
+  async function loadResults() {
+    try {
+      setLoading(true);
+
+      const response = await fetch("/api/results", {
+        cache: "no-store",
+      });
+
+      const data = await response.json();
+
+      setMatches(Array.isArray(data) ? data : []);
+
+      const map: Record<number, ResultInput> = {};
+
+      data.forEach((match: Match) => {
+        if (match.result) {
+          map[match.id] = {
+            homeScore: String(match.result.home_score),
+            awayScore: String(match.result.away_score),
+          };
+        } else {
+          map[match.id] = {
+            homeScore: "",
+            awayScore: "",
+          };
+        }
+      });
+
+      setResults(map);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  }
 
   function updateResult(
     matchId: number,
@@ -152,11 +157,38 @@ export default function AdminPage() {
       }
 
       setSavedMatchId(matchId);
+      await loadResults();
     } catch (error) {
       console.error(error);
       alert("No se pudo guardar el resultado.");
     } finally {
       setSavingMatchId(null);
+    }
+  }
+
+  async function syncApiResults() {
+    try {
+      setSyncing(true);
+      setSyncMessage("");
+
+      const response = await fetch("/api/sync-results", {
+        method: "POST",
+      });
+
+      const json = await response.json();
+
+      if (!response.ok) {
+        throw new Error(json.error || "No se pudo sincronizar");
+      }
+
+      setSyncMessage(`✅ ${json.updated} resultados sincronizados desde API`);
+
+      await loadResults();
+    } catch (error) {
+      console.error(error);
+      setSyncMessage("❌ No se pudieron sincronizar resultados desde API");
+    } finally {
+      setSyncing(false);
     }
   }
 
@@ -192,8 +224,7 @@ export default function AdminPage() {
       </AdminShell>
     );
   }
-
-  return (
+    return (
     <main
       style={{
         minHeight: "100vh",
@@ -250,12 +281,25 @@ export default function AdminPage() {
                 marginTop: 14,
               }}
             >
-              Captura o corrige resultados oficiales. El leaderboard se
-              recalcula automáticamente con base en estos marcadores.
+              Captura o sincroniza resultados oficiales del Mundial 2026.
             </p>
           </div>
 
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+            <button
+              onClick={syncApiResults}
+              disabled={syncing}
+              style={{
+                ...adminSyncButton,
+                opacity: syncing ? 0.7 : 1,
+                cursor: syncing ? "not-allowed" : "pointer",
+              }}
+            >
+              {syncing
+                ? "Sincronizando..."
+                : "Sincronizar API"}
+            </button>
+
             <Link href="/leaderboard" style={primaryButton}>
               Ver leaderboard
             </Link>
@@ -265,6 +309,18 @@ export default function AdminPage() {
             </Link>
           </div>
         </div>
+
+        {syncMessage && (
+          <div
+            style={{
+              marginBottom: 24,
+              color: "gold",
+              fontWeight: 900,
+            }}
+          >
+            {syncMessage}
+          </div>
+        )}
 
         {loading ? (
           <div style={emptyCard}>Cargando partidos...</div>
@@ -278,10 +334,15 @@ export default function AdminPage() {
           >
             {matches.map((match) => {
               const current = results[match.id];
+
               const hasResult =
-                current?.homeScore !== "" && current?.awayScore !== "";
+                current?.homeScore !== "" &&
+                current?.awayScore !== "";
+
               const saving = savingMatchId === match.id;
-              const recentlySaved = savedMatchId === match.id;
+
+              const recentlySaved =
+                savedMatchId === match.id;
 
               return (
                 <div
@@ -293,9 +354,6 @@ export default function AdminPage() {
                     border: hasResult
                       ? "1px solid rgba(50,205,50,0.4)"
                       : "1px solid rgba(255,255,255,0.12)",
-                    boxShadow: hasResult
-                      ? "0 0 24px rgba(50,205,50,0.12)"
-                      : "none",
                   }}
                 >
                   <div
@@ -318,53 +376,82 @@ export default function AdminPage() {
                         Partido #{match.matchNumber} · {match.group}
                       </div>
 
-                      <div style={{ color: "lightgray", fontSize: 14 }}>
+                      <div
+                        style={{
+                          color: "lightgray",
+                          fontSize: 14,
+                        }}
+                      >
                         {match.date} · {match.time} · {match.city}
                       </div>
 
-                      <div style={{ color: "darkgray", fontSize: 13 }}>
+                      <div
+                        style={{
+                          color: "darkgray",
+                          fontSize: 13,
+                        }}
+                      >
                         {match.stadium}
                       </div>
                     </div>
 
                     <div
                       style={{
-                        color: hasResult ? "limegreen" : "orange",
+                        color: hasResult
+                          ? "limegreen"
+                          : "orange",
                         fontWeight: 900,
                       }}
                     >
-                      {hasResult ? "RESULTADO CARGADO" : "PENDIENTE"}
+                      {hasResult
+                        ? "RESULTADO CARGADO"
+                        : "PENDIENTE"}
                     </div>
                   </div>
 
                   <div
                     style={{
                       display: "grid",
-                      gridTemplateColumns: "1fr auto 1fr auto",
+                      gridTemplateColumns:
+                        "1fr auto 1fr auto",
                       gap: 18,
                       alignItems: "center",
                     }}
                   >
-                    <Team name={match.home} flag={match.homeFlag} />
+                    <Team
+                      name={match.home}
+                      flag={match.homeFlag}
+                    />
 
                     <input
                       type="number"
                       min="0"
                       value={current?.homeScore ?? ""}
                       onChange={(e) =>
-                        updateResult(match.id, "homeScore", e.target.value)
+                        updateResult(
+                          match.id,
+                          "homeScore",
+                          e.target.value
+                        )
                       }
                       style={scoreInput}
                     />
 
-                    <Team name={match.away} flag={match.awayFlag} />
+                    <Team
+                      name={match.away}
+                      flag={match.awayFlag}
+                    />
 
                     <input
                       type="number"
                       min="0"
                       value={current?.awayScore ?? ""}
                       onChange={(e) =>
-                        updateResult(match.id, "awayScore", e.target.value)
+                        updateResult(
+                          match.id,
+                          "awayScore",
+                          e.target.value
+                        )
                       }
                       style={scoreInput}
                     />
@@ -383,7 +470,9 @@ export default function AdminPage() {
                       style={{
                         ...primaryButton,
                         border: "none",
-                        cursor: saving ? "not-allowed" : "pointer",
+                        cursor: saving
+                          ? "not-allowed"
+                          : "pointer",
                         opacity: saving ? 0.7 : 1,
                       }}
                     >
@@ -406,14 +495,19 @@ export default function AdminPage() {
   );
 }
 
-function Team({ name, flag }: { name: string; flag: string }) {
+function Team({
+  name,
+  flag,
+}: {
+  name: string;
+  flag: string;
+}) {
   return (
     <div
       style={{
         display: "flex",
         alignItems: "center",
         gap: 14,
-        minWidth: 0,
       }}
     >
       <img
@@ -424,7 +518,6 @@ function Team({ name, flag }: { name: string; flag: string }) {
           height: 38,
           objectFit: "cover",
           borderRadius: 8,
-          border: "1px solid rgba(255,255,255,0.14)",
         }}
       />
 
@@ -440,7 +533,11 @@ function Team({ name, flag }: { name: string; flag: string }) {
   );
 }
 
-function AdminShell({ children }: { children: React.ReactNode }) {
+function AdminShell({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <main
       style={{
@@ -461,7 +558,8 @@ function AdminShell({ children }: { children: React.ReactNode }) {
           padding: 32,
           borderRadius: 24,
           background: "rgba(0,0,0,0.82)",
-          border: "1px solid rgba(255,255,255,0.14)",
+          border:
+            "1px solid rgba(255,255,255,0.14)",
         }}
       >
         {children}
@@ -473,9 +571,19 @@ function AdminShell({ children }: { children: React.ReactNode }) {
 const primaryButton: React.CSSProperties = {
   padding: "14px 22px",
   borderRadius: 14,
-  background: "linear-gradient(135deg, limegreen, #7CFC00)",
+  background:
+    "linear-gradient(135deg, limegreen, #7CFC00)",
   color: "black",
   textDecoration: "none",
+  fontWeight: 900,
+};
+
+const adminSyncButton: React.CSSProperties = {
+  padding: "14px 22px",
+  borderRadius: 14,
+  background: "gold",
+  color: "black",
+  border: "none",
   fontWeight: 900,
 };
 
@@ -493,7 +601,8 @@ const scoreInput: React.CSSProperties = {
   width: 78,
   height: 64,
   borderRadius: 16,
-  border: "1px solid rgba(255,255,255,0.14)",
+  border:
+    "1px solid rgba(255,255,255,0.14)",
   background: "rgba(0,0,0,0.72)",
   color: "white",
   fontSize: 30,
