@@ -104,9 +104,11 @@ export default function Navbar() {
             flexWrap: "wrap",
           }}
         >
+          {user && (
           <Link href="/" style={secondaryButton}>
             Inicio
           </Link>
+            )}
 
           {user && (
             <>
