@@ -6,7 +6,6 @@ import { supabaseBrowser } from "@/lib/supabaseBrowser";
 
 export default function Navbar() {
   const supabase = supabaseBrowser();
-
   const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
@@ -20,15 +19,6 @@ export default function Navbar() {
 
     loadUser();
   }, []);
-
-  async function handleLogin() {
-    await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-      },
-    });
-  }
 
   async function handleLogout() {
     await supabase.auth.signOut();
@@ -72,8 +62,7 @@ export default function Navbar() {
               width: 46,
               height: 46,
               borderRadius: 14,
-              background:
-                "linear-gradient(135deg, limegreen, gold)",
+              background: "linear-gradient(135deg, limegreen, gold)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -119,7 +108,7 @@ export default function Navbar() {
             Inicio
           </Link>
 
-          {user ? (
+          {user && (
             <>
               <Link href="/quiniela" style={primaryButton}>
                 Quiniela
@@ -129,20 +118,10 @@ export default function Navbar() {
                 Leaderboard
               </Link>
 
-              <button
-                onClick={handleLogout}
-                style={logoutButton}
-              >
+              <button onClick={handleLogout} style={logoutButton}>
                 Cerrar sesión
               </button>
             </>
-          ) : (
-            <button
-              onClick={handleLogin}
-              style={primaryButton}
-            >
-              Iniciar sesión
-            </button>
           )}
         </div>
       </div>
@@ -153,8 +132,7 @@ export default function Navbar() {
 const primaryButton: React.CSSProperties = {
   padding: "14px 22px",
   borderRadius: 999,
-  background:
-    "linear-gradient(135deg, limegreen, #7CFC00)",
+  background: "linear-gradient(135deg, limegreen, #7CFC00)",
   color: "black",
   textDecoration: "none",
   fontWeight: 900,
