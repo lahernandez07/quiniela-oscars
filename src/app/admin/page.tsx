@@ -32,8 +32,8 @@ type ResultInput = {
 };
 
 const ADMIN_EMAILS = [
-  "la.hernandez07@icloud.com",
-  // "correo.de.pepe@gmail.com",
+  "la.hernandez07@gmail.com",
+  "josetamezg@gmail.com",
 ];
 
 export default function AdminPage() {

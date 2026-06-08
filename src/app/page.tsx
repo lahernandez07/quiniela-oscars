@@ -4,10 +4,17 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 
+const ADMIN_EMAILS = [
+  "la.hernandez07@gmail.com",
+  "josetamezg@gmail.com",
+];
+
 export default function HomePage() {
   const supabase = supabaseBrowser();
   const [user, setUser] = useState<any>(null);
   const [checking, setChecking] = useState(true);
+
+  const isAdmin = !!user?.email && ADMIN_EMAILS.includes(user.email);
 
   useEffect(() => {
     async function loadUser() {
@@ -80,8 +87,8 @@ export default function HomePage() {
             marginBottom: 34,
           }}
         >
-          Captura tus pronósticos de la fase de grupos, compite por cortes
-          semanales y pelea por el campeonato general de la quiniela.
+          Captura tus pronósticos de la fase de grupos, compite por semanas
+          y pelea por el campeonato general de la quiniela.
         </p>
 
         {!checking && (
@@ -102,6 +109,12 @@ export default function HomePage() {
                 <Link href="/leaderboard" style={secondaryButton}>
                   Ver tablero
                 </Link>
+
+                {isAdmin && (
+                  <Link href="/admin" style={adminButton}>
+                    Admin
+                  </Link>
+                )}
               </>
             ) : (
               <button onClick={handleLogin} style={primaryButton}>
@@ -171,8 +184,8 @@ export default function HomePage() {
             Premio para el segundo lugar general.
           </PrizeCard>
 
-          <PrizeCard title="Cortes semanales" amount="$2,000">
-            Premio semanal para el líder de cada corte.
+          <PrizeCard title="Semanas" amount="$2,000">
+            Premio semanal para el líder de cada semana.
           </PrizeCard>
         </div>
 
@@ -199,7 +212,7 @@ export default function HomePage() {
               },
               {
                 step: "3",
-                title: "Compite por cortes",
+                title: "Compite por semanas",
                 text: "Cada semana se paga al líder del periodo. Si hay empate, se divide.",
               },
               {
@@ -261,6 +274,17 @@ const primaryButton: React.CSSProperties = {
   padding: "15px 24px",
   borderRadius: 12,
   background: "limegreen",
+  color: "black",
+  border: "none",
+  textDecoration: "none",
+  fontWeight: 900,
+  cursor: "pointer",
+};
+
+const adminButton: React.CSSProperties = {
+  padding: "15px 24px",
+  borderRadius: 12,
+  background: "gold",
   color: "black",
   border: "none",
   textDecoration: "none",
