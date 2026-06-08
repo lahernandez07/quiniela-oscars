@@ -77,6 +77,9 @@ export default function QuinielaPage() {
   const [predictions, setPredictions] =
     useState<Record<number, Prediction>>({});
 
+  const [savedMatches, setSavedMatches] =
+    useState<Record<number, boolean>>({});
+
   useEffect(() => {
     async function loadPageData() {
       try {
@@ -97,15 +100,19 @@ export default function QuinielaPage() {
           .eq("user_id", user.id);
 
         const predictionsMap: Record<number, Prediction> = {};
+        const savedMap: Record<number, boolean> = {};
 
         savedPredictions?.forEach((item) => {
           predictionsMap[item.match_id] = {
             homeScore: String(item.home_score),
             awayScore: String(item.away_score),
           };
+
+          savedMap[item.match_id] = true;
         });
 
         setPredictions(predictionsMap);
+        setSavedMatches(savedMap);
       } catch (error) {
         console.error(error);
       } finally {
@@ -131,6 +138,11 @@ export default function QuinielaPage() {
     field: "homeScore" | "awayScore",
     value: string
   ) {
+    setSavedMatches((prev) => ({
+      ...prev,
+      [matchId]: false,
+    }));
+
     setPredictions((prev) => ({
       ...prev,
       [matchId]: {
@@ -145,14 +157,12 @@ export default function QuinielaPage() {
     const prediction = predictions[matchId];
 
     if (!prediction?.homeScore || !prediction?.awayScore) {
-      alert("Captura ambos marcadores.");
       return;
     }
 
     const match = matches.find((m) => m.id === matchId);
 
     if (match && isMatchLocked(match)) {
-      alert("Este partido ya inició.");
       return;
     }
 
@@ -161,7 +171,6 @@ export default function QuinielaPage() {
     } = await supabase.auth.getUser();
 
     if (!user) {
-      alert("Debes iniciar sesión.");
       return;
     }
 
@@ -180,11 +189,14 @@ export default function QuinielaPage() {
       );
 
     if (error) {
-      alert(error.message);
+      console.error(error);
       return;
     }
 
-    alert("Pronóstico guardado.");
+    setSavedMatches((prev) => ({
+      ...prev,
+      [matchId]: true,
+    }));
   }
 
   return (
@@ -252,17 +264,11 @@ export default function QuinielaPage() {
           </div>
 
           <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-            <Link
-              href="/"
-              style={secondaryButton}
-            >
+            <Link href="/" style={secondaryButton}>
               Inicio
             </Link>
 
-            <Link
-              href="/leaderboard"
-              style={primaryButton}
-            >
+            <Link href="/leaderboard" style={primaryButton}>
               Ver leaderboard
             </Link>
           </div>
@@ -335,6 +341,7 @@ export default function QuinielaPage() {
             {filteredMatches.map((match) => {
               const prediction = predictions[match.id];
               const locked = isMatchLocked(match);
+              const saved = savedMatches[match.id];
 
               return (
                 <div
@@ -353,11 +360,7 @@ export default function QuinielaPage() {
                     opacity: locked ? 0.72 : 1,
                   }}
                 >
-                  <div
-                    style={{
-                      padding: 24,
-                    }}
-                  >
+                  <div style={{ padding: 24 }}>
                     <div
                       style={{
                         display: "flex",
@@ -518,21 +521,26 @@ export default function QuinielaPage() {
                           border: "none",
                           background: locked
                             ? "dimgray"
-                            : "linear-gradient(135deg, limegreen, #7CFC00)",
+                            : saved
+                              ? "linear-gradient(135deg, #00c853, #69f0ae)"
+                              : "linear-gradient(135deg, limegreen, #7CFC00)",
                           color: "black",
                           fontWeight: 900,
                           cursor: locked
                             ? "not-allowed"
                             : "pointer",
-                          minWidth: 160,
-                          boxShadow: locked
-                            ? "none"
+                          minWidth: 180,
+                          transition: "all .25s ease",
+                          boxShadow: saved
+                            ? "0 0 24px rgba(0,200,83,0.45)"
                             : "0 0 20px rgba(50,205,50,0.35)",
                         }}
                       >
                         {locked
                           ? "Bloqueado"
-                          : "Guardar pronóstico"}
+                          : saved
+                            ? "✓ Guardado"
+                            : "Guardar pronóstico"}
                       </button>
                     </div>
                   </div>
