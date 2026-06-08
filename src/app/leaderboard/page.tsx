@@ -225,9 +225,9 @@ export default function LeaderboardPage() {
                     <tr>
                       <th style={thStyle}>#</th>
                       <th style={thStyle}>Participante</th>
-                      <th style={thStyle}>Corte 1</th>
-                      <th style={thStyle}>Corte 2</th>
-                      <th style={thStyle}>Corte 3</th>
+                      <th style={thStyle}>Semana 1</th>
+                      <th style={thStyle}>Semana 2</th>
+                      <th style={thStyle}>Semana 3</th>
                       <th style={thStyle}>Total</th>
                       <th style={thStyle}>Exactos</th>
                     </tr>
