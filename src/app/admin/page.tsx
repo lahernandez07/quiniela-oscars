@@ -1,379 +1,510 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
+import { useEffect, useState } from "react";
+import { supabaseBrowser } from "@/lib/supabaseBrowser";
 
-type Nominee = {
-  id: string;
-  label: string;
-  image_url?: string | null;
+type MatchResult = {
+  match_id: number;
+  home_score: number;
+  away_score: number;
+  updated_at?: string;
 };
 
-type Category = {
-  id: string;
-  name: string;
-  sort_order: number;
-  winner_nominee_id?: string | null;
-  nominees: Nominee[];
+type Match = {
+  id: number;
+  matchNumber: number;
+  group: string;
+  home: string;
+  away: string;
+  homeFlag: string;
+  awayFlag: string;
+  date: string;
+  time: string;
+  stadium: string;
+  city: string;
+  result: MatchResult | null;
 };
+
+type ResultInput = {
+  homeScore: string;
+  awayScore: string;
+};
+
+const ADMIN_EMAILS = [
+  "la.hernandez07@icloud.com",
+  // "correo.de.pepe@gmail.com",
+];
 
 export default function AdminPage() {
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [savingKey, setSavingKey] = useState<string | null>(null);
-  const [activeCatId, setActiveCatId] = useState<string | null>(null);
+  const supabase = supabaseBrowser();
 
-  const catRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [checkingAuth, setCheckingAuth] = useState(true);
+
+  const [matches, setMatches] = useState<Match[]>([]);
+  const [results, setResults] = useState<Record<number, ResultInput>>({});
+  const [loading, setLoading] = useState(true);
+  const [savingMatchId, setSavingMatchId] = useState<number | null>(null);
+  const [savedMatchId, setSavedMatchId] = useState<number | null>(null);
 
   useEffect(() => {
-    async function loadCategories() {
-      const res = await fetch("/api/categories", { cache: "no-store" });
-      const data = await res.json();
-      setCategories(data);
+    async function checkUser() {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      const email = user?.email ?? null;
+
+      setUserEmail(email);
+      setIsAdmin(!!email && ADMIN_EMAILS.includes(email));
+      setCheckingAuth(false);
     }
 
-    loadCategories();
+    checkUser();
   }, []);
 
-  const confirmedWinners = categories.filter(
-    (cat) => !!cat.winner_nominee_id
-  ).length;
+  useEffect(() => {
+    if (!isAdmin) return;
 
-  const navCategories = useMemo(() => {
-    return [...categories].sort((a, b) => {
-      const aDone = !!a.winner_nominee_id;
-      const bDone = !!b.winner_nominee_id;
+    async function loadResults() {
+      try {
+        const response = await fetch("/api/results", {
+          cache: "no-store",
+        });
 
-      if (aDone !== bDone) return aDone ? 1 : -1;
-      return a.sort_order - b.sort_order;
-    });
-  }, [categories]);
+        const data = await response.json();
 
-  function scrollToCategory(catId: string) {
-    const el = catRefs.current[catId];
-    if (el) {
-      el.scrollIntoView({ behavior: "smooth", block: "start" });
-      setActiveCatId(catId);
+        setMatches(Array.isArray(data) ? data : []);
+
+        const map: Record<number, ResultInput> = {};
+
+        data.forEach((match: Match) => {
+          if (match.result) {
+            map[match.id] = {
+              homeScore: String(match.result.home_score),
+              awayScore: String(match.result.away_score),
+            };
+          } else {
+            map[match.id] = {
+              homeScore: "",
+              awayScore: "",
+            };
+          }
+        });
+
+        setResults(map);
+      } catch (error) {
+        console.error(error);
+      } finally {
+        setLoading(false);
+      }
     }
+
+    loadResults();
+  }, [isAdmin]);
+
+  function updateResult(
+    matchId: number,
+    field: "homeScore" | "awayScore",
+    value: string
+  ) {
+    setSavedMatchId(null);
+
+    setResults((prev) => ({
+      ...prev,
+      [matchId]: {
+        homeScore: prev[matchId]?.homeScore ?? "",
+        awayScore: prev[matchId]?.awayScore ?? "",
+        [field]: value,
+      },
+    }));
   }
 
-  function getNextPendingCategory(currentId: string) {
-    const pending = categories.filter((c) => !c.winner_nominee_id);
-    const index = pending.findIndex((c) => c.id === currentId);
-    return pending[index + 1];
-  }
+  async function saveResult(matchId: number) {
+    const result = results[matchId];
 
-  async function setWinner(categoryId: string, nomineeId: string) {
+    if (!result?.homeScore || !result?.awayScore) {
+      alert("Captura ambos marcadores oficiales.");
+      return;
+    }
+
     try {
-      setSavingKey(`${categoryId}-${nomineeId}`);
+      setSavingMatchId(matchId);
 
-      const res = await fetch("/api/winners", {
+      const response = await fetch("/api/results", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          category_id: categoryId,
-          nominee_id: nomineeId,
+          match_id: matchId,
+          home_score: Number(result.homeScore),
+          away_score: Number(result.awayScore),
         }),
       });
 
-      if (!res.ok) {
-        throw new Error("No se pudo guardar el ganador");
+      const json = await response.json();
+
+      if (!response.ok) {
+        throw new Error(json.error || "No se pudo guardar el resultado");
       }
 
-      setCategories((prev) =>
-        prev.map((cat) =>
-          cat.id === categoryId
-            ? { ...cat, winner_nominee_id: nomineeId }
-            : cat
-        )
-      );
-
-      alert("Ganador guardado");
-
-      const next = getNextPendingCategory(categoryId);
-      if (next) {
-        setTimeout(() => scrollToCategory(next.id), 400);
-      }
+      setSavedMatchId(matchId);
     } catch (error) {
       console.error(error);
-      alert("No se pudo guardar el ganador");
+      alert("No se pudo guardar el resultado.");
     } finally {
-      setSavingKey(null);
+      setSavingMatchId(null);
     }
+  }
+
+  if (checkingAuth) {
+    return <AdminShell>Cargando acceso...</AdminShell>;
+  }
+
+  if (!userEmail) {
+    return (
+      <AdminShell>
+        <h1 style={{ marginTop: 0 }}>Acceso restringido</h1>
+        <p style={{ color: "lightgray" }}>
+          Debes iniciar sesión para entrar al panel operativo.
+        </p>
+        <Link href="/" style={primaryButton}>
+          Ir al inicio
+        </Link>
+      </AdminShell>
+    );
+  }
+
+  if (!isAdmin) {
+    return (
+      <AdminShell>
+        <h1 style={{ marginTop: 0 }}>Sin permisos de admin</h1>
+        <p style={{ color: "lightgray" }}>
+          Tu usuario actual no tiene permisos para capturar resultados.
+        </p>
+        <p style={{ color: "gold", fontWeight: 800 }}>{userEmail}</p>
+        <Link href="/" style={primaryButton}>
+          Ir al inicio
+        </Link>
+      </AdminShell>
+    );
   }
 
   return (
     <main
       style={{
-        maxWidth: 1100,
-        margin: "40px auto",
-        fontFamily: "sans-serif",
-        padding: "0 260px 0 16px",
+        minHeight: "100vh",
+        background:
+          "linear-gradient(rgba(0,0,0,0.78), rgba(0,0,0,0.94)), url('/worldcup-bg.jpg')",
+        backgroundSize: "cover",
+        backgroundPosition: "center",
         color: "white",
+        fontFamily: "sans-serif",
+        padding: "40px 16px",
       }}
     >
-      {/* HEADER */}
-
-      <div
-        style={{
-          marginBottom: 24,
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          gap: 16,
-          flexWrap: "wrap",
-        }}
-      >
-        <div>
-          <h1 style={{ margin: 0 }}>Admin — Ganadores Oscars</h1>
-          <p style={{ marginTop: 8, color: "#aaa" }}>
-            Selecciona el ganador oficial por categoría.
-          </p>
-        </div>
-
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-          <Link
-            href="/"
-            style={{
-              padding: "10px 16px",
-              borderRadius: 10,
-              border: "1px solid #444",
-              background: "#161616",
-              color: "white",
-              textDecoration: "none",
-              fontWeight: 600,
-            }}
-          >
-            Inicio
-          </Link>
-
-          <Link
-            href="/leaderboard"
-            style={{
-              padding: "10px 16px",
-              borderRadius: 10,
-              border: "1px solid #444",
-              background: "#161616",
-              color: "white",
-              textDecoration: "none",
-              fontWeight: 600,
-            }}
-          >
-            Ver tablero
-          </Link>
-        </div>
-      </div>
-
-      {/* BARRA LATERAL */}
-
-      <div
-        style={{
-          position: "fixed",
-          right: 20,
-          top: 120,
-          zIndex: 100,
-          display: "flex",
-          flexDirection: "column",
-          gap: 8,
-          padding: 14,
-          borderRadius: 14,
-          background: "rgba(0,0,0,0.75)",
-          backdropFilter: "blur(6px)",
-          border: "1px solid rgba(255,255,255,0.12)",
-          boxShadow: "0 8px 24px rgba(0,0,0,0.28)",
-          maxHeight: "75vh",
-          overflowY: "auto",
-          width: 220,
-        }}
-      >
+      <div style={{ maxWidth: 1200, margin: "0 auto" }}>
         <div
           style={{
-            fontSize: 13,
-            fontWeight: 700,
-            textAlign: "center",
-            marginBottom: 8,
-            color: "#d1d5db",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            gap: 18,
+            flexWrap: "wrap",
+            marginBottom: 30,
           }}
         >
-          {confirmedWinners}/{categories.length} premios
-        </div>
-
-        {navCategories.map((cat) => {
-          const hasWinner = !!cat.winner_nominee_id;
-          const isActive = activeCatId === cat.id;
-
-          return (
-            <button
-              key={cat.id}
-              onClick={() => scrollToCategory(cat.id)}
+          <div>
+            <div
               style={{
-                padding: "10px 12px",
-                borderRadius: 8,
-                fontWeight: 600,
+                display: "inline-block",
+                padding: "8px 14px",
+                borderRadius: 999,
+                background: "limegreen",
+                color: "black",
+                fontWeight: 900,
                 fontSize: 13,
-                textAlign: "left",
-                cursor: "pointer",
-                background: hasWinner
-                  ? "#4ade80"
-                  : isActive
-                  ? "#1d4ed8"
-                  : "#374151",
-                color: hasWinner ? "#052e16" : "white",
-                border: "1px solid rgba(255,255,255,0.12)",
+                marginBottom: 16,
               }}
             >
-              {cat.name}
-            </button>
-          );
-        })}
-      </div>
+              PANEL OPERATIVO
+            </div>
 
-      {/* CATEGORÍAS */}
+            <h1
+              style={{
+                margin: 0,
+                fontSize: "clamp(36px, 6vw, 64px)",
+              }}
+            >
+              Resultados oficiales
+            </h1>
 
-      {categories.map((cat) => (
-        <div
-          id={`cat-${cat.id}`}
-          key={cat.id}
-          ref={(el) => {
-            if (el) {
-              catRefs.current[cat.id] = el;
-            }
-          }}
-          style={{ marginBottom: 40 }}
-        >
-          <div
-            style={{
-              display: "inline-block",
-              marginBottom: 12,
-              padding: "10px 16px",
-              borderRadius: 12,
-              background: "rgba(0,0,0,0.65)",
-              backdropFilter: "blur(4px)",
-              color: "white",
-              fontWeight: 700,
-              border: "1px solid rgba(255,255,255,0.15)",
-            }}
-          >
-            🏆 {cat.sort_order}. {cat.name}
+            <p
+              style={{
+                color: "lightgray",
+                maxWidth: 720,
+                lineHeight: 1.6,
+                marginTop: 14,
+              }}
+            >
+              Captura o corrige resultados oficiales. El leaderboard se
+              recalcula automáticamente con base en estos marcadores.
+            </p>
           </div>
 
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(3, 1fr)",
-              gap: 16,
-              marginTop: 16,
-            }}
-          >
-            {cat.nominees.map((n) => {
-              const isWinner = cat.winner_nominee_id === n.id;
-              const hasImage = !!n.image_url && n.image_url.trim() !== "";
-              const isSaving = savingKey === `${cat.id}-${n.id}`;
+          <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+            <Link href="/leaderboard" style={primaryButton}>
+              Ver leaderboard
+            </Link>
 
-              return (
-                <label
-                  key={n.id}
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    gap: 12,
-                    cursor: isSaving ? "wait" : "pointer",
-                    padding: 12,
-                    borderRadius: 12,
-                    border: isWinner ? "2px solid #facc15" : "1px solid #444",
-                    background: isWinner ? "#2a2410" : "#111",
-                    opacity: isSaving ? 0.7 : 1,
-                  }}
-                >
-                  <input
-                    type="radio"
-                    name={cat.id}
-                    checked={isWinner}
-                    onChange={() => setWinner(cat.id, n.id)}
-                    style={{ display: "none" }}
-                  />
-
-                  <div style={{ position: "relative" }}>
-                    {hasImage ? (
-                      <Image
-                        src={n.image_url as string}
-                        alt={n.label}
-                        width={180}
-                        height={270}
-                        style={{
-                          objectFit: "cover",
-                          borderRadius: 4,
-                          border: "1px solid #444",
-                        }}
-                      />
-                    ) : (
-                      <div
-                        style={{
-                          width: 180,
-                          height: 270,
-                          borderRadius: 4,
-                          background: "#1f1f1f",
-                          border: "1px solid #444",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          color: "#aaa",
-                          fontSize: 12,
-                        }}
-                      >
-                        No poster
-                      </div>
-                    )}
-
-                    {isWinner && (
-                      <div
-                        style={{
-                          position: "absolute",
-                          top: 8,
-                          left: 8,
-                          background: "#facc15",
-                          color: "#000",
-                          padding: "4px 8px",
-                          borderRadius: 6,
-                          fontSize: 12,
-                          fontWeight: "bold",
-                        }}
-                      >
-                        🏆 GANADOR
-                      </div>
-                    )}
-
-                    {isSaving && (
-                      <div
-                        style={{
-                          position: "absolute",
-                          top: 8,
-                          right: 8,
-                          background: "#2563eb",
-                          color: "#fff",
-                          padding: "4px 8px",
-                          borderRadius: 6,
-                          fontSize: 12,
-                          fontWeight: "bold",
-                        }}
-                      >
-                        Guardando...
-                      </div>
-                    )}
-                  </div>
-
-                  <span style={{ fontWeight: 600, textAlign: "center" }}>
-                    {n.label}
-                  </span>
-                </label>
-              );
-            })}
+            <Link href="/quiniela" style={secondaryButton}>
+              Ir a quiniela
+            </Link>
           </div>
         </div>
-      ))}
+
+        {loading ? (
+          <div style={emptyCard}>Cargando partidos...</div>
+        ) : (
+          <section
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: 18,
+            }}
+          >
+            {matches.map((match) => {
+              const current = results[match.id];
+              const hasResult =
+                current?.homeScore !== "" && current?.awayScore !== "";
+              const saving = savingMatchId === match.id;
+              const recentlySaved = savedMatchId === match.id;
+
+              return (
+                <div
+                  key={match.id}
+                  style={{
+                    padding: 22,
+                    borderRadius: 24,
+                    background: "rgba(0,0,0,0.78)",
+                    border: hasResult
+                      ? "1px solid rgba(50,205,50,0.4)"
+                      : "1px solid rgba(255,255,255,0.12)",
+                    boxShadow: hasResult
+                      ? "0 0 24px rgba(50,205,50,0.12)"
+                      : "none",
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      gap: 14,
+                      flexWrap: "wrap",
+                      marginBottom: 18,
+                    }}
+                  >
+                    <div>
+                      <div
+                        style={{
+                          color: "gold",
+                          fontWeight: 900,
+                          marginBottom: 6,
+                        }}
+                      >
+                        Partido #{match.matchNumber} · {match.group}
+                      </div>
+
+                      <div style={{ color: "lightgray", fontSize: 14 }}>
+                        {match.date} · {match.time} · {match.city}
+                      </div>
+
+                      <div style={{ color: "darkgray", fontSize: 13 }}>
+                        {match.stadium}
+                      </div>
+                    </div>
+
+                    <div
+                      style={{
+                        color: hasResult ? "limegreen" : "orange",
+                        fontWeight: 900,
+                      }}
+                    >
+                      {hasResult ? "RESULTADO CARGADO" : "PENDIENTE"}
+                    </div>
+                  </div>
+
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "1fr auto 1fr auto",
+                      gap: 18,
+                      alignItems: "center",
+                    }}
+                  >
+                    <Team name={match.home} flag={match.homeFlag} />
+
+                    <input
+                      type="number"
+                      min="0"
+                      value={current?.homeScore ?? ""}
+                      onChange={(e) =>
+                        updateResult(match.id, "homeScore", e.target.value)
+                      }
+                      style={scoreInput}
+                    />
+
+                    <Team name={match.away} flag={match.awayFlag} />
+
+                    <input
+                      type="number"
+                      min="0"
+                      value={current?.awayScore ?? ""}
+                      onChange={(e) =>
+                        updateResult(match.id, "awayScore", e.target.value)
+                      }
+                      style={scoreInput}
+                    />
+                  </div>
+
+                  <div
+                    style={{
+                      marginTop: 20,
+                      display: "flex",
+                      justifyContent: "flex-end",
+                    }}
+                  >
+                    <button
+                      onClick={() => saveResult(match.id)}
+                      disabled={saving}
+                      style={{
+                        ...primaryButton,
+                        border: "none",
+                        cursor: saving ? "not-allowed" : "pointer",
+                        opacity: saving ? 0.7 : 1,
+                      }}
+                    >
+                      {saving
+                        ? "Guardando..."
+                        : recentlySaved
+                          ? "✓ Resultado guardado"
+                          : hasResult
+                            ? "Actualizar resultado"
+                            : "Guardar resultado"}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </section>
+        )}
+      </div>
     </main>
   );
 }
+
+function Team({ name, flag }: { name: string; flag: string }) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 14,
+        minWidth: 0,
+      }}
+    >
+      <img
+        src={`https://flagcdn.com/w80/${flag}.png`}
+        alt={name}
+        style={{
+          width: 54,
+          height: 38,
+          objectFit: "cover",
+          borderRadius: 8,
+          border: "1px solid rgba(255,255,255,0.14)",
+        }}
+      />
+
+      <div
+        style={{
+          fontWeight: 900,
+          fontSize: 18,
+        }}
+      >
+        {name}
+      </div>
+    </div>
+  );
+}
+
+function AdminShell({ children }: { children: React.ReactNode }) {
+  return (
+    <main
+      style={{
+        minHeight: "100vh",
+        background:
+          "linear-gradient(rgba(0,0,0,0.78), rgba(0,0,0,0.94)), url('/worldcup-bg.jpg')",
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        color: "white",
+        fontFamily: "sans-serif",
+        padding: "40px 16px",
+      }}
+    >
+      <section
+        style={{
+          maxWidth: 760,
+          margin: "80px auto",
+          padding: 32,
+          borderRadius: 24,
+          background: "rgba(0,0,0,0.82)",
+          border: "1px solid rgba(255,255,255,0.14)",
+        }}
+      >
+        {children}
+      </section>
+    </main>
+  );
+}
+
+const primaryButton: React.CSSProperties = {
+  padding: "14px 22px",
+  borderRadius: 14,
+  background: "linear-gradient(135deg, limegreen, #7CFC00)",
+  color: "black",
+  textDecoration: "none",
+  fontWeight: 900,
+};
+
+const secondaryButton: React.CSSProperties = {
+  padding: "14px 22px",
+  borderRadius: 14,
+  border: "1px solid rgba(255,255,255,0.12)",
+  background: "rgba(255,255,255,0.04)",
+  color: "white",
+  textDecoration: "none",
+  fontWeight: 800,
+};
+
+const scoreInput: React.CSSProperties = {
+  width: 78,
+  height: 64,
+  borderRadius: 16,
+  border: "1px solid rgba(255,255,255,0.14)",
+  background: "rgba(0,0,0,0.72)",
+  color: "white",
+  fontSize: 30,
+  fontWeight: 900,
+  textAlign: "center",
+  outline: "none",
+};
+
+const emptyCard: React.CSSProperties = {
+  padding: 50,
+  borderRadius: 24,
+  background: "rgba(0,0,0,0.78)",
+  textAlign: "center",
+};
