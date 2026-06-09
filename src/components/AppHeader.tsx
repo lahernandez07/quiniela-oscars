@@ -35,9 +35,10 @@ export default function AppHeader() {
   }, []);
 
   async function handleLogout() {
-    await supabase.auth.signOut();
-    router.push("/");
-  }
+  await supabase.auth.signOut();
+
+  window.location.href = "/";
+}
 
   return (
     <header
