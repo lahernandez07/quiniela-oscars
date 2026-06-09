@@ -120,7 +120,8 @@ export default function PronosticosPage() {
                       </p>
 
                       <p className="text-4xl font-black">
-                        {match.result.home_score} - {match.result.away_score}
+                        {match.result.home_score} -{" "}
+                        {match.result.away_score}
                       </p>
                     </div>
                   ) : (
@@ -144,9 +145,16 @@ export default function PronosticosPage() {
                   <table className="w-full">
                     <thead className="bg-zinc-800 text-zinc-300 uppercase text-sm">
                       <tr>
-                        <th className="px-6 py-4 text-left">Participante</th>
-                        <th className="px-6 py-4 text-center">Pronóstico</th>
+                        <th className="px-6 py-4 text-left">
+                          Participante
+                        </th>
+
+                        <th className="px-6 py-4 text-center">
+                          Pronóstico
+                        </th>
+
                         <th className="px-6 py-4 text-center">Puntos</th>
+
                         <th className="px-6 py-4 text-center">Exacto</th>
                       </tr>
                     </thead>
@@ -156,7 +164,9 @@ export default function PronosticosPage() {
                         <tr
                           key={`${match.match_id}-${prediction.user_id}`}
                           className={`border-t border-zinc-800 ${
-                            index % 2 === 0 ? "bg-zinc-900" : "bg-zinc-950"
+                            index % 2 === 0
+                              ? "bg-zinc-900"
+                              : "bg-zinc-950"
                           }`}
                         >
                           <td className="px-6 py-4 font-semibold">
