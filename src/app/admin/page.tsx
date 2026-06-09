@@ -153,8 +153,16 @@ export default function AdminPage() {
       const json = await response.json();
 
       if (!response.ok) {
-        throw new Error(json.error || "No se pudo guardar el resultado");
-      }
+       console.log("RESULT SAVE ERROR:", json);
+
+        alert(
+          json?.error ||
+            json?.details?.message ||
+            "No se pudo guardar el resultado."
+        );
+
+        return;
+        }
 
       setSavedMatchId(matchId);
       await loadResults();

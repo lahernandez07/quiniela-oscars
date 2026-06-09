@@ -25,10 +25,10 @@ export async function GET() {
       .select("*");
 
     if (error) {
-      console.error(error);
+      console.error("SUPABASE GET ERROR:", error);
 
       return NextResponse.json(
-        { error: error.message },
+        { error: error.message, details: error },
         { status: 500 }
       );
     }
@@ -46,10 +46,10 @@ export async function GET() {
 
     return NextResponse.json(mergedMatches);
   } catch (error) {
-    console.error(error);
+    console.error("GET INTERNAL ERROR:", error);
 
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: "Internal server error", details: error },
       { status: 500 }
     );
   }
@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
       away_score === undefined
     ) {
       return NextResponse.json(
-        { error: "Missing required fields" },
+        { error: "Missing required fields", body },
         { status: 400 }
       );
     }
@@ -88,10 +88,13 @@ export async function POST(request: NextRequest) {
       .select();
 
     if (error) {
-      console.error(error);
+      console.error("SUPABASE POST ERROR:", error);
 
       return NextResponse.json(
-        { error: error.message },
+        {
+          error: error.message,
+          details: error,
+        },
         { status: 500 }
       );
     }
@@ -101,10 +104,13 @@ export async function POST(request: NextRequest) {
       data,
     });
   } catch (error) {
-    console.error(error);
+    console.error("POST INTERNAL ERROR:", error);
 
     return NextResponse.json(
-      { error: "Internal server error" },
+      {
+        error: "Internal server error",
+        details: error,
+      },
       { status: 500 }
     );
   }
