@@ -410,6 +410,7 @@ export default function QuinielaPage() {
                       >
                         <input
                           type="number"
+                          placeholder="L"
                           min="0"
                           disabled={locked}
                           value={prediction?.homeScore ?? ""}
@@ -434,6 +435,7 @@ export default function QuinielaPage() {
 
                         <input
                           type="number"
+                          placeholder="V"
                           min="0"
                           disabled={locked}
                           value={prediction?.awayScore ?? ""}
