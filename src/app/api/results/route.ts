@@ -25,6 +25,8 @@ export async function GET() {
       .select("*");
 
     if (error) {
+      console.error(error);
+
       return NextResponse.json(
         { error: error.message },
         { status: 500 }
@@ -57,11 +59,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
-    const {
-      match_id,
-      home_score,
-      away_score,
-    } = body;
+    const { match_id, home_score, away_score } = body;
 
     if (
       match_id === undefined ||
@@ -78,9 +76,9 @@ export async function POST(request: NextRequest) {
       .from("results_dev")
       .upsert(
         {
-          match_id,
-          home_score,
-          away_score,
+          match_id: Number(match_id),
+          home_score: Number(home_score),
+          away_score: Number(away_score),
           updated_at: new Date().toISOString(),
         },
         {
@@ -90,6 +88,8 @@ export async function POST(request: NextRequest) {
       .select();
 
     if (error) {
+      console.error(error);
+
       return NextResponse.json(
         { error: error.message },
         { status: 500 }
