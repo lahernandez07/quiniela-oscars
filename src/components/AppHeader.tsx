@@ -5,10 +5,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 
-const ADMIN_EMAILS = [
-  "la.hernandez07@gmail.com",
-  "josetamezg@gmail.com",
-];
+const ADMIN_EMAILS = ["la.hernandez07@gmail.com", "josetamezg@gmail.com"];
 
 export default function AppHeader() {
   const router = useRouter();
@@ -18,8 +15,7 @@ export default function AppHeader() {
   const [loading, setLoading] = useState(true);
 
   const isAdmin =
-    !!user?.email &&
-    ADMIN_EMAILS.includes(user.email.toLowerCase());
+    !!user?.email && ADMIN_EMAILS.includes(user.email.toLowerCase());
 
   useEffect(() => {
     async function loadUser() {
@@ -35,169 +31,121 @@ export default function AppHeader() {
   }, []);
 
   async function handleLogout() {
-  await supabase.auth.signOut();
-
-  window.location.href = "/";
-}
+    await supabase.auth.signOut();
+    window.location.href = "/";
+  }
 
   return (
-    <header
-      style={{
-        borderBottom: "1px solid rgba(255,255,255,0.12)",
-        background: "rgba(0,0,0,0.92)",
-        padding: "18px 28px",
-        position: "sticky",
-        top: 0,
-        zIndex: 50,
-      }}
-    >
-      <div
-        style={{
-          maxWidth: 1280,
-          margin: "0 auto",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          gap: 18,
-          flexWrap: "wrap",
-        }}
-      >
+    <header className="sticky top-0 z-50 border-b border-white/10 bg-black/95">
+      <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 md:px-7 md:py-4">
         <Link
           href="/"
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 12,
-            textDecoration: "none",
-            color: "white",
-          }}
+          className="flex min-w-0 items-center gap-3 text-white no-underline"
         >
-          <div
-            style={{
-              width: 44,
-              height: 44,
-              borderRadius: 12,
-              background: "#9cff00",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "black",
-              fontWeight: 900,
-            }}
-          >
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-lime-400 text-xl font-black text-black">
             🐾
           </div>
 
-          <div>
-            <div
-              style={{
-                fontWeight: 900,
-                fontSize: 18,
-              }}
-            >
+          <div className="min-w-0">
+            <div className="truncate text-base font-black md:text-lg">
               Panteras Del ICC
             </div>
-
-            <div
-              style={{
-                fontSize: 12,
-                color: "#bdbdbd",
-                fontWeight: 800,
-                letterSpacing: 1,
-              }}
-            >
+            <div className="truncate text-[10px] font-extrabold tracking-widest text-zinc-400 md:text-xs">
               QUINIELA MUNDIAL 2026
             </div>
           </div>
         </Link>
 
-        <nav
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-            flexWrap: "wrap",
-          }}
-        >
-          <Link href="/" style={navButton}>
+        <nav className="hidden items-center gap-2 md:flex">
+          <Link href="/" className={navButton}>
             Inicio
           </Link>
 
-          <Link href="/quiniela" style={primaryButton}>
+          <Link href="/quiniela" className={primaryButton}>
             Quiniela
           </Link>
 
-          <Link href="/pronosticos" style={goldButton}>
+          <Link href="/pronosticos" className={goldButton}>
             Pronósticos
           </Link>
 
-          <Link href="/leaderboard" style={navButton}>
+          <Link href="/leaderboard" className={navButton}>
             Leaderboard
           </Link>
 
           {!loading && isAdmin && (
-            <Link href="/admin" style={adminButton}>
+            <Link href="/admin" className={adminButton}>
               Admin
             </Link>
           )}
 
           {!loading && user && (
-            <button onClick={handleLogout} style={logoutButton}>
+            <button onClick={handleLogout} className={logoutButton}>
               Cerrar sesión
             </button>
           )}
         </nav>
       </div>
+
+      <nav className="flex gap-2 overflow-x-auto border-t border-white/10 px-4 py-3 md:hidden">
+        <Link href="/" className={mobileNavButton}>
+          Inicio
+        </Link>
+
+        <Link href="/quiniela" className={mobilePrimaryButton}>
+          Quiniela
+        </Link>
+
+        <Link href="/pronosticos" className={mobileGoldButton}>
+          Pronósticos
+        </Link>
+
+        <Link href="/leaderboard" className={mobileNavButton}>
+          Tabla
+        </Link>
+
+        {!loading && isAdmin && (
+          <Link href="/admin" className={mobileAdminButton}>
+            Admin
+          </Link>
+        )}
+
+        {!loading && user && (
+          <button onClick={handleLogout} className={mobileLogoutButton}>
+            Salir
+          </button>
+        )}
+      </nav>
     </header>
   );
 }
 
-const navButton: React.CSSProperties = {
-  padding: "13px 20px",
-  borderRadius: 999,
-  background: "rgba(255,255,255,0.04)",
-  color: "white",
-  border: "1px solid rgba(255,255,255,0.2)",
-  textDecoration: "none",
-  fontWeight: 800,
-};
+const navButton =
+  "rounded-full border border-white/20 bg-white/5 px-5 py-3 font-extrabold text-white no-underline";
 
-const primaryButton: React.CSSProperties = {
-  padding: "13px 20px",
-  borderRadius: 999,
-  background: "#39ff14",
-  color: "black",
-  border: "1px solid #39ff14",
-  textDecoration: "none",
-  fontWeight: 900,
-};
+const primaryButton =
+  "rounded-full border border-lime-400 bg-lime-400 px-5 py-3 font-black text-black no-underline";
 
-const goldButton: React.CSSProperties = {
-  padding: "13px 20px",
-  borderRadius: 999,
-  background: "#f5b400",
-  color: "black",
-  border: "1px solid #f5b400",
-  textDecoration: "none",
-  fontWeight: 900,
-};
+const goldButton =
+  "rounded-full border border-yellow-400 bg-yellow-400 px-5 py-3 font-black text-black no-underline";
 
-const adminButton: React.CSSProperties = {
-  padding: "13px 20px",
-  borderRadius: 999,
-  background: "gold",
-  color: "black",
-  border: "1px solid gold",
-  textDecoration: "none",
-  fontWeight: 900,
-};
+const adminButton =
+  "rounded-full border border-yellow-300 bg-yellow-300 px-5 py-3 font-black text-black no-underline";
 
-const logoutButton: React.CSSProperties = {
-  padding: "13px 20px",
-  borderRadius: 999,
-  background: "rgba(255,0,0,0.08)",
-  color: "#ff9b9b",
-  border: "1px solid rgba(255,0,0,0.35)",
-  fontWeight: 900,
-  cursor: "pointer",
-};
+const logoutButton =
+  "rounded-full border border-red-500/40 bg-red-500/10 px-5 py-3 font-black text-red-200";
+
+const mobileNavButton =
+  "shrink-0 rounded-full border border-white/20 bg-white/5 px-4 py-2 text-sm font-extrabold text-white no-underline";
+
+const mobilePrimaryButton =
+  "shrink-0 rounded-full border border-lime-400 bg-lime-400 px-4 py-2 text-sm font-black text-black no-underline";
+
+const mobileGoldButton =
+  "shrink-0 rounded-full border border-yellow-400 bg-yellow-400 px-4 py-2 text-sm font-black text-black no-underline";
+
+const mobileAdminButton =
+  "shrink-0 rounded-full border border-yellow-300 bg-yellow-300 px-4 py-2 text-sm font-black text-black no-underline";
+
+const mobileLogoutButton =
+  "shrink-0 rounded-full border border-red-500/40 bg-red-500/10 px-4 py-2 text-sm font-black text-red-200";

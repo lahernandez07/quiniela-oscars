@@ -34,19 +34,23 @@ const cuts = {
   },
   cut1: {
     label: "Semana 1",
-    description: "Semana 1 · 11 al 14 junio · $1,500 1er lugar / $500 2do lugar - Pago lunes 15",
+    description:
+      "Semana 1 · 11 al 14 junio · $1,500 1er lugar / $500 2do lugar - Pago lunes 15",
     start: "2026-06-11",
     end: "2026-06-14",
   },
   cut2: {
     label: "Semana 2",
-    description: "Semana 2 - 15 al 21 de junio · $1,500 1er lugar / $500 2do lugar - Pago lunes 22",
+    description:
+      "Semana 2 - 15 al 21 de junio · $1,500 1er lugar / $500 2do lugar - Pago lunes 22",
     start: "2026-06-15",
     end: "2026-06-21",
   },
   cut3: {
-    label: "Semana 3",
-    description: "Semana 3 - 22 al 27 de junio · $1,500 1er lugar / $500 2do lugar - Pago lunes 29",
+    label:
+      "Semana 3",
+    description:
+      "Semana 3 - 22 al 27 de junio · $1,500 1er lugar / $500 2do lugar - Pago lunes 29",
     start: "2026-06-22",
     end: "2026-06-27",
   },
@@ -124,9 +128,7 @@ export default function QuinielaPage() {
   }, []);
 
   const filteredMatches = useMemo(() => {
-    return matches.filter((match) =>
-      isMatchInCut(match, activeCut)
-    );
+    return matches.filter((match) => isMatchInCut(match, activeCut));
   }, [matches, activeCut]);
 
   const completedInFilter = filteredMatches.filter(
@@ -174,19 +176,17 @@ export default function QuinielaPage() {
       return;
     }
 
-    const { error } = await supabase
-      .from("predictions_dev")
-      .upsert(
-        {
-          user_id: user.id,
-          match_id: matchId,
-          home_score: Number(prediction.homeScore),
-          away_score: Number(prediction.awayScore),
-        },
-        {
-          onConflict: "user_id,match_id",
-        }
-      );
+    const { error } = await supabase.from("predictions_dev").upsert(
+      {
+        user_id: user.id,
+        match_id: matchId,
+        home_score: Number(prediction.homeScore),
+        away_score: Number(prediction.awayScore),
+      },
+      {
+        onConflict: "user_id,match_id",
+      }
+    );
 
     if (error) {
       console.error(error);
@@ -207,7 +207,7 @@ export default function QuinielaPage() {
           "linear-gradient(rgba(0,0,0,.78), rgba(0,0,0,.92)), url('/worldcup-bg.jpg')",
         backgroundSize: "cover",
         backgroundPosition: "center",
-        padding: "40px 16px",
+        padding: "32px 16px",
         color: "white",
         fontFamily: "sans-serif",
       }}
@@ -242,7 +242,7 @@ export default function QuinielaPage() {
             <h1
               style={{
                 margin: 0,
-                fontSize: "clamp(40px, 6vw, 70px)",
+                fontSize: "clamp(36px, 9vw, 70px)",
                 lineHeight: 1,
               }}
             >
@@ -321,15 +321,12 @@ export default function QuinielaPage() {
               fontWeight: 800,
             }}
           >
-            Pronósticos capturados: {completedInFilter}/
-            {filteredMatches.length}
+            Pronósticos capturados: {completedInFilter}/{filteredMatches.length}
           </div>
         </section>
 
         {loading ? (
-          <div style={loadingCard}>
-            Cargando partidos...
-          </div>
+          <div style={loadingCard}>Cargando partidos...</div>
         ) : (
           <section
             style={{
@@ -355,8 +352,7 @@ export default function QuinielaPage() {
                     background:
                       "linear-gradient(135deg, rgba(255,255,255,0.05), rgba(0,0,0,0.88))",
                     backdropFilter: "blur(10px)",
-                    boxShadow:
-                      "0 0 30px rgba(0,0,0,0.35)",
+                    boxShadow: "0 0 30px rgba(0,0,0,0.35)",
                     opacity: locked ? 0.72 : 1,
                   }}
                 >
@@ -397,15 +393,7 @@ export default function QuinielaPage() {
                       </div>
                     </div>
 
-                    <div
-                      style={{
-                        display: "grid",
-                        gridTemplateColumns:
-                          "1fr auto 1fr",
-                        alignItems: "center",
-                        gap: 18,
-                      }}
-                    >
+                    <div className="grid grid-cols-1 items-center gap-5 md:grid-cols-[1fr_auto_1fr] md:gap-[18px]">
                       <TeamSide
                         name={match.home}
                         flag={match.homeFlag}
@@ -416,6 +404,7 @@ export default function QuinielaPage() {
                         style={{
                           display: "flex",
                           alignItems: "center",
+                          justifyContent: "center",
                           gap: 14,
                         }}
                       >
@@ -470,8 +459,7 @@ export default function QuinielaPage() {
                       style={{
                         marginTop: 22,
                         paddingTop: 18,
-                        borderTop:
-                          "1px solid rgba(255,255,255,0.08)",
+                        borderTop: "1px solid rgba(255,255,255,0.08)",
                         display: "flex",
                         justifyContent: "space-between",
                         alignItems: "center",
@@ -495,8 +483,7 @@ export default function QuinielaPage() {
                             fontSize: 14,
                           }}
                         >
-                          {match.date} · {match.time} ·{" "}
-                          {match.city}
+                          {match.date} · {match.time} · {match.city}
                         </div>
 
                         <div
@@ -511,9 +498,7 @@ export default function QuinielaPage() {
                       </div>
 
                       <button
-                        onClick={() =>
-                          savePrediction(match.id)
-                        }
+                        onClick={() => savePrediction(match.id)}
                         disabled={locked}
                         style={{
                           padding: "14px 22px",
@@ -526,9 +511,7 @@ export default function QuinielaPage() {
                               : "linear-gradient(135deg, limegreen, #7CFC00)",
                           color: "black",
                           fontWeight: 900,
-                          cursor: locked
-                            ? "not-allowed"
-                            : "pointer",
+                          cursor: locked ? "not-allowed" : "pointer",
                           minWidth: 180,
                           transition: "all .25s ease",
                           boxShadow: saved
@@ -565,14 +548,11 @@ function TeamSide({
 }) {
   return (
     <div
-      style={{
-        display: "flex",
-        flexDirection:
-          align === "right" ? "row-reverse" : "row",
-        alignItems: "center",
-        gap: 16,
-        textAlign: align,
-      }}
+      className={`flex items-center gap-4 ${
+        align === "right"
+          ? "flex-row-reverse justify-center text-center md:justify-start md:text-right"
+          : "flex-row justify-center text-center md:justify-start md:text-left"
+      }`}
     >
       <img
         src={`https://flagcdn.com/w80/${flag}.png`}
@@ -588,8 +568,9 @@ function TeamSide({
 
       <div
         style={{
-          fontSize: "clamp(18px, 2vw, 28px)",
+          fontSize: "clamp(22px, 6vw, 28px)",
           fontWeight: 900,
+          lineHeight: 1.1,
         }}
       >
         {name}
@@ -599,13 +580,13 @@ function TeamSide({
 }
 
 const scoreInput: React.CSSProperties = {
-  width: 82,
-  height: 82,
+  width: "clamp(64px, 20vw, 82px)",
+  height: "clamp(64px, 20vw, 82px)",
   borderRadius: 18,
   border: "1px solid rgba(255,255,255,0.14)",
   background: "rgba(0,0,0,0.72)",
   color: "white",
-  fontSize: 34,
+  fontSize: 28,
   fontWeight: 900,
   textAlign: "center",
   outline: "none",

@@ -69,7 +69,7 @@ export default function HomePage() {
 
         <h1
           style={{
-            fontSize: "clamp(44px, 8vw, 86px)",
+            fontSize: "clamp(34px, 9vw, 86px)",
             lineHeight: 1,
             margin: "0 0 22px",
             letterSpacing: "-2px",
@@ -93,13 +93,14 @@ export default function HomePage() {
 
         {!checking && (
           <div
-            style={{
-              display: "flex",
+           style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
               gap: 14,
-              flexWrap: "wrap",
               marginBottom: 48,
-            }}
-          >
+              maxWidth: 720,
+              }}
+              >
             {user ? (
               <>
                 <Link href="/quiniela" style={primaryButton}>
