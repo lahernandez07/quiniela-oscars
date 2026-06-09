@@ -106,6 +106,10 @@ export default function HomePage() {
                   Capturar pronósticos
                 </Link>
 
+                <Link href="/pronosticos" style={goldButton}>
+                  Ver pronósticos
+                </Link>
+
                 <Link href="/leaderboard" style={secondaryButton}>
                   Ver tablero
                 </Link>
@@ -155,7 +159,9 @@ export default function HomePage() {
                 >
                   TABLA GENERAL
                 </div>
+
                 <h2 style={{ margin: 0 }}>Top 5 de la quiniela</h2>
+
                 <p style={{ color: "lightgray" }}>
                   Consulta la tabla general de participantes.
                 </p>
@@ -186,8 +192,8 @@ export default function HomePage() {
 
           <PrizeCard title="Premios semanales" amount="$2,000">
             $1,500 para el 1er lugar y $500 para el 2do lugar de cada semana.
-              </PrizeCard>
-              </div>
+          </PrizeCard>
+        </div>
 
         <section style={sectionStyle}>
           <h2 style={{ marginTop: 0 }}>Cómo funciona</h2>
@@ -240,6 +246,7 @@ export default function HomePage() {
                 </div>
 
                 <h3 style={{ margin: "0 0 8px" }}>{item.title}</h3>
+
                 <p style={{ margin: 0, color: "lightgray", lineHeight: 1.5 }}>
                   {item.text}
                 </p>
@@ -264,7 +271,9 @@ function PrizeCard({
   return (
     <div style={cardStyle}>
       <div style={goldLabelStyle}>{title}</div>
+
       <h2 style={{ margin: "0 0 8px", fontSize: 34 }}>{amount}</h2>
+
       <p style={{ color: "lightgray", margin: 0 }}>{children}</p>
     </div>
   );
@@ -274,6 +283,17 @@ const primaryButton: React.CSSProperties = {
   padding: "15px 24px",
   borderRadius: 12,
   background: "limegreen",
+  color: "black",
+  border: "none",
+  textDecoration: "none",
+  fontWeight: 900,
+  cursor: "pointer",
+};
+
+const goldButton: React.CSSProperties = {
+  padding: "15px 24px",
+  borderRadius: 12,
+  background: "#f5b400",
   color: "black",
   border: "none",
   textDecoration: "none",
