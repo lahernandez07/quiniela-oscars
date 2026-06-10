@@ -2,20 +2,22 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 
-const ADMIN_EMAILS = ["la.hernandez07@gmail.com", "josetamezg@gmail.com"];
+const ADMIN_EMAILS = [
+  "la.hernandez07@gmail.com",
+  "josetamezg@gmail.com",
+];
 
 export default function AppHeader() {
-  const router = useRouter();
   const supabase = supabaseBrowser();
 
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   const isAdmin =
-    !!user?.email && ADMIN_EMAILS.includes(user.email.toLowerCase());
+    !!user?.email &&
+    ADMIN_EMAILS.includes(user.email.toLowerCase());
 
   useEffect(() => {
     async function loadUser() {
@@ -50,70 +52,95 @@ export default function AppHeader() {
             <div className="truncate text-base font-black md:text-lg">
               Panteras Del ICC
             </div>
+
             <div className="truncate text-[10px] font-extrabold tracking-widest text-zinc-400 md:text-xs">
               QUINIELA MUNDIAL 2026
             </div>
           </div>
         </Link>
 
+        {/* DESKTOP */}
         <nav className="hidden items-center gap-2 md:flex">
           <Link href="/" className={navButton}>
             Inicio
           </Link>
 
-          <Link href="/quiniela" className={primaryButton}>
-            Quiniela
-          </Link>
-
-          <Link href="/pronosticos" className={goldButton}>
-            Pronósticos
-          </Link>
-
-          <Link href="/leaderboard" className={navButton}>
-            Leaderboard
-          </Link>
-
-          {!loading && isAdmin && (
-            <Link href="/admin" className={adminButton}>
-              Admin
-            </Link>
-          )}
-
           {!loading && user && (
-            <button onClick={handleLogout} className={logoutButton}>
-              Cerrar sesión
-            </button>
+            <>
+              <Link href="/quiniela" className={primaryButton}>
+                Quiniela
+              </Link>
+
+              <Link href="/pronosticos" className={goldButton}>
+                Pronósticos
+              </Link>
+
+              <Link href="/leaderboard" className={navButton}>
+                Leaderboard
+              </Link>
+
+              {isAdmin && (
+                <Link href="/admin" className={adminButton}>
+                  Admin
+                </Link>
+              )}
+
+              <button
+                onClick={handleLogout}
+                className={logoutButton}
+              >
+                Cerrar sesión
+              </button>
+            </>
           )}
         </nav>
       </div>
 
+      {/* MOBILE */}
       <nav className="flex gap-2 overflow-x-auto border-t border-white/10 px-4 py-3 md:hidden">
         <Link href="/" className={mobileNavButton}>
           Inicio
         </Link>
 
-        <Link href="/quiniela" className={mobilePrimaryButton}>
-          Quiniela
-        </Link>
-
-        <Link href="/pronosticos" className={mobileGoldButton}>
-          Pronósticos
-        </Link>
-
-        <Link href="/leaderboard" className={mobileNavButton}>
-          Tabla
-        </Link>
-
-        {!loading && isAdmin && (
-          <Link href="/admin" className={mobileAdminButton}>
-            Admin
-          </Link>
-        )}
-
         {!loading && user && (
-          <button onClick={handleLogout} className={mobileLogoutButton}>
-            Salir
-          </button>
+          <>
+            <Link
+              href="/quiniela"
+              className={mobilePrimaryButton}
+            >
+              Quiniela
+            </Link>
+
+            <Link
+              href="/pronosticos"
+              className={mobileGoldButton}
+            >
+              Pronósticos
+            </Link>
+
+            <Link
+              href="/leaderboard"
+              className={mobileNavButton}
+            >
+              Tabla
+            </Link>
+
+            {isAdmin && (
+              <Link
+                href="/admin"
+                className={mobileAdminButton}
+              >
+                Admin
+              </Link>
+            )}
+
+            <button
+              onClick={handleLogout}
+              className={mobileLogoutButton}
+            >
+              Salir
+            </button>
+          </>
         )}
       </nav>
     </header>
