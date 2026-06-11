@@ -73,11 +73,15 @@ export default function AppHeader() {
 
               <Link href="/pronosticos" className={goldButton}>
                 Pronósticos
-              </Link>
+                </Link>
 
-              <Link href="/leaderboard" className={navButton}>
+                <Link href="/participation" className={navButton}>
+                Participación
+                </Link>
+
+                <Link href="/leaderboard" className={navButton}>
                 Leaderboard
-              </Link>
+                </Link>
 
               {isAdmin && (
                 <Link href="/admin" className={adminButton}>
@@ -112,18 +116,25 @@ export default function AppHeader() {
             </Link>
 
             <Link
-              href="/pronosticos"
-              className={mobileGoldButton}
-            >
-              Pronósticos
-            </Link>
+  href="/pronosticos"
+  className={mobileGoldButton}
+>
+  Pronósticos
+</Link>
 
-            <Link
-              href="/leaderboard"
-              className={mobileNavButton}
-            >
-              Tabla
-            </Link>
+<Link
+  href="/participation"
+  className={mobileNavButton}
+>
+  Participación
+</Link>
+
+<Link
+  href="/leaderboard"
+  className={mobileNavButton}
+>
+  Tabla
+</Link>
 
             {isAdmin && (
               <Link
