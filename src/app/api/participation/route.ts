@@ -19,10 +19,13 @@ export async function GET() {
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   );
 
-  const matchesResponse = await fetch(
-    `${process.env.NEXT_PUBLIC_SITE_URL ?? ""}/api/matches`,
-    { cache: "no-store" }
-  );
+  const siteUrl =
+  process.env.NEXT_PUBLIC_SITE_URL ||
+  "https://panteras2026.vercel.app";
+
+const matchesResponse = await fetch(`${siteUrl}/api/matches`, {
+  cache: "no-store",
+});
 
   const matches = await matchesResponse.json();
   const totalMatches = Array.isArray(matches) ? matches.length : 0;
