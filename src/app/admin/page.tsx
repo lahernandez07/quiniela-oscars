@@ -66,7 +66,7 @@ export default function AdminPage() {
     }
 
     checkUser();
-  }, []);
+  }, [supabase]);
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -153,7 +153,7 @@ export default function AdminPage() {
       const json = await response.json();
 
       if (!response.ok) {
-       console.log("RESULT SAVE ERROR:", json);
+        console.log("RESULT SAVE ERROR:", json);
 
         alert(
           json?.error ||
@@ -162,7 +162,7 @@ export default function AdminPage() {
         );
 
         return;
-        }
+      }
 
       setSavedMatchId(matchId);
       await loadResults();
@@ -173,8 +173,7 @@ export default function AdminPage() {
       setSavingMatchId(null);
     }
   }
-
-  async function syncApiResults() {
+    async function syncApiResults() {
     try {
       setSyncing(true);
       setSyncMessage("");
@@ -186,442 +185,364 @@ export default function AdminPage() {
       const json = await response.json();
 
       if (!response.ok) {
-        throw new Error(json.error || "No se pudo sincronizar");
+        setSyncMessage(
+          json?.error || "Error sincronizando resultados."
+        );
+        return;
       }
 
-      setSyncMessage(`✅ ${json.updated} resultados sincronizados desde API`);
+      setSyncMessage(
+        `Sincronización completada. ${json.updated ?? 0} partido(s) actualizados.`
+      );
 
       await loadResults();
     } catch (error) {
       console.error(error);
-      setSyncMessage("❌ No se pudieron sincronizar resultados desde API");
+      setSyncMessage("Error sincronizando resultados.");
     } finally {
       setSyncing(false);
     }
   }
 
   if (checkingAuth) {
-    return <AdminShell>Cargando acceso...</AdminShell>;
-  }
-
-  if (!userEmail) {
     return (
-      <AdminShell>
-        <h1 style={{ marginTop: 0 }}>Acceso restringido</h1>
-        <p style={{ color: "lightgray" }}>
-          Debes iniciar sesión para entrar al panel operativo.
-        </p>
-        <Link href="/" style={primaryButton}>
-          Ir al inicio
-        </Link>
-      </AdminShell>
+      <main style={{ padding: 40 }}>
+        <h1>Validando acceso...</h1>
+      </main>
     );
   }
 
   if (!isAdmin) {
     return (
-      <AdminShell>
-        <h1 style={{ marginTop: 0 }}>Sin permisos de admin</h1>
-        <p style={{ color: "lightgray" }}>
-          Tu usuario actual no tiene permisos para capturar resultados.
-        </p>
-        <p style={{ color: "gold", fontWeight: 800 }}>{userEmail}</p>
-        <Link href="/" style={primaryButton}>
-          Ir al inicio
-        </Link>
-      </AdminShell>
+      <main style={{ padding: 40 }}>
+        <h1>Acceso restringido</h1>
+        <p>{userEmail ?? "Usuario no autenticado"}</p>
+      </main>
     );
   }
+
+  if (loading) {
     return (
-    <main
-      style={{
-        minHeight: "100vh",
-        background:
-          "linear-gradient(rgba(0,0,0,0.78), rgba(0,0,0,0.94)), url('/worldcup-bg.jpg')",
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-        color: "white",
-        fontFamily: "sans-serif",
-        padding: "40px 16px",
-      }}
-    >
-      <div style={{ maxWidth: 1200, margin: "0 auto" }}>
+      <main style={{ padding: 40 }}>
+        <h1>Cargando resultados...</h1>
+      </main>
+    );
+  }
+
+  return (
+    <main style={{ padding: "24px 32px" }}>
+      <section
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          gap: 20,
+          flexWrap: "wrap",
+          alignItems: "center",
+          marginBottom: 40,
+        }}
+      >
+        <div>
+          <div
+            style={{
+              display: "inline-block",
+              background: "#3DFF4F",
+              color: "black",
+              padding: "10px 18px",
+              borderRadius: 999,
+              fontWeight: 900,
+              marginBottom: 18,
+            }}
+          >
+            PANEL OPERATIVO
+          </div>
+
+          <h1
+            style={{
+              fontSize: "clamp(42px,6vw,72px)",
+              fontWeight: 900,
+              margin: 0,
+            }}
+          >
+            Resultados oficiales
+          </h1>
+
+          <p
+            style={{
+              marginTop: 18,
+              opacity: 0.9,
+              fontSize: 20,
+            }}
+          >
+            Captura o sincroniza resultados oficiales del Mundial 2026.
+          </p>
+        </div>
+
         <div
           style={{
             display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            gap: 18,
+            gap: 12,
             flexWrap: "wrap",
-            marginBottom: 30,
           }}
         >
-          <div>
+          <button
+            onClick={syncApiResults}
+            disabled={syncing}
+            style={yellowButton}
+          >
+            {syncing
+              ? "Sincronizando..."
+              : "Sincronizar API"}
+          </button>
+
+          <Link
+            href="/leaderboard"
+            style={greenButton}
+          >
+            Ver leaderboard
+          </Link>
+
+          <Link
+            href="/quiniela"
+            style={darkButton}
+          >
+            Ir a quiniela
+          </Link>
+        </div>
+      </section>
+
+      {syncMessage && (
+        <div
+          style={{
+            marginBottom: 24,
+            padding: 16,
+            borderRadius: 12,
+            background: "rgba(0,255,0,.08)",
+          }}
+        >
+          {syncMessage}
+        </div>
+      )}
+
+      {matches.map((match) => {
+        const current = results[match.id];
+
+        const hasResult =
+          current?.homeScore !== "" &&
+          current?.awayScore !== "";
+
+        return (
+          <div
+            key={match.id}
+            style={{
+              border: "1px solid rgba(255,255,255,.12)",
+              borderRadius: 28,
+              padding: 24,
+              marginBottom: 24,
+            }}
+          >
             <div
               style={{
-                display: "inline-block",
-                padding: "8px 14px",
-                borderRadius: 999,
-                background: "limegreen",
-                color: "black",
-                fontWeight: 900,
-                fontSize: 13,
-                marginBottom: 16,
+                display: "flex",
+                justifyContent: "space-between",
+                marginBottom: 24,
               }}
             >
-              PANEL OPERATIVO
-            </div>
-
-            <h1
-              style={{
-                margin: 0,
-                fontSize: "clamp(36px, 6vw, 64px)",
-              }}
-            >
-              Resultados oficiales
-            </h1>
-
-            <p
-              style={{
-                color: "lightgray",
-                maxWidth: 720,
-                lineHeight: 1.6,
-                marginTop: 14,
-              }}
-            >
-              Captura o sincroniza resultados oficiales del Mundial 2026.
-            </p>
-          </div>
-
-          <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-            <button
-              onClick={syncApiResults}
-              disabled={syncing}
-              style={{
-                ...adminSyncButton,
-                opacity: syncing ? 0.7 : 1,
-                cursor: syncing ? "not-allowed" : "pointer",
-              }}
-            >
-              {syncing
-                ? "Sincronizando..."
-                : "Sincronizar API"}
-            </button>
-
-            <Link href="/leaderboard" style={primaryButton}>
-              Ver leaderboard
-            </Link>
-
-            <Link href="/quiniela" style={secondaryButton}>
-              Ir a quiniela
-            </Link>
-          </div>
-        </div>
-
-        {syncMessage && (
-          <div
-            style={{
-              marginBottom: 24,
-              color: "gold",
-              fontWeight: 900,
-            }}
-          >
-            {syncMessage}
-          </div>
-        )}
-
-        {loading ? (
-          <div style={emptyCard}>Cargando partidos...</div>
-        ) : (
-          <section
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: 18,
-            }}
-          >
-            {matches.map((match) => {
-              const current = results[match.id];
-
-              const hasResult =
-                current?.homeScore !== "" &&
-                current?.awayScore !== "";
-
-              const saving = savingMatchId === match.id;
-
-              const recentlySaved =
-                savedMatchId === match.id;
-
-              return (
+              <div>
                 <div
-                  key={match.id}
                   style={{
-                    padding: 22,
-                    borderRadius: 24,
-                    background: "rgba(0,0,0,0.78)",
-                    border: hasResult
-                      ? "1px solid rgba(50,205,50,0.4)"
-                      : "1px solid rgba(255,255,255,0.12)",
+                    color: "#FFCC00",
+                    fontWeight: 900,
+                    marginBottom: 10,
                   }}
                 >
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      gap: 14,
-                      flexWrap: "wrap",
-                      marginBottom: 18,
-                    }}
-                  >
-                    <div>
-                      <div
-                        style={{
-                          color: "gold",
-                          fontWeight: 900,
-                          marginBottom: 6,
-                        }}
-                      >
-                        Partido #{match.matchNumber} · {match.group}
-                      </div>
-
-                      <div
-                        style={{
-                          color: "lightgray",
-                          fontSize: 14,
-                        }}
-                      >
-                        {match.date} · {match.time} · {match.city}
-                      </div>
-
-                      <div
-                        style={{
-                          color: "darkgray",
-                          fontSize: 13,
-                        }}
-                      >
-                        {match.stadium}
-                      </div>
-                    </div>
-
-                    <div
-                      style={{
-                        color: hasResult
-                          ? "limegreen"
-                          : "orange",
-                        fontWeight: 900,
-                      }}
-                    >
-                      {hasResult
-                        ? "RESULTADO CARGADO"
-                        : "PENDIENTE"}
-                    </div>
-                  </div>
-
-                  <div
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns:
-                        "1fr auto 1fr auto",
-                      gap: 18,
-                      alignItems: "center",
-                    }}
-                  >
-                    <Team
-                      name={match.home}
-                      flag={match.homeFlag}
-                    />
-
-                    <input
-                      type="number"
-                      min="0"
-                      value={current?.homeScore ?? ""}
-                      onChange={(e) =>
-                        updateResult(
-                          match.id,
-                          "homeScore",
-                          e.target.value
-                        )
-                      }
-                      style={scoreInput}
-                    />
-
-                    <Team
-                      name={match.away}
-                      flag={match.awayFlag}
-                    />
-
-                    <input
-                      type="number"
-                      min="0"
-                      value={current?.awayScore ?? ""}
-                      onChange={(e) =>
-                        updateResult(
-                          match.id,
-                          "awayScore",
-                          e.target.value
-                        )
-                      }
-                      style={scoreInput}
-                    />
-                  </div>
-
-                  <div
-                    style={{
-                      marginTop: 20,
-                      display: "flex",
-                      justifyContent: "flex-end",
-                    }}
-                  >
-                    <button
-                      onClick={() => saveResult(match.id)}
-                      disabled={saving}
-                      style={{
-                        ...primaryButton,
-                        border: "none",
-                        cursor: saving
-                          ? "not-allowed"
-                          : "pointer",
-                        opacity: saving ? 0.7 : 1,
-                      }}
-                    >
-                      {saving
-                        ? "Guardando..."
-                        : recentlySaved
-                          ? "✓ Resultado guardado"
-                          : hasResult
-                            ? "Actualizar resultado"
-                            : "Guardar resultado"}
-                    </button>
-                  </div>
+                  Partido #{match.matchNumber} · {match.group}
                 </div>
-              );
-            })}
-          </section>
-        )}
-      </div>
+
+                <div>
+                  {match.date} · {match.time} · {match.city}
+                </div>
+
+                <div
+                  style={{
+                    opacity: 0.7,
+                    marginTop: 4,
+                  }}
+                >
+                  {match.stadium}
+                </div>
+              </div>
+
+              <div
+                style={{
+                  color: hasResult
+                    ? "#00ff66"
+                    : "#ffb000",
+                  fontWeight: 900,
+                }}
+              >
+                {hasResult
+                  ? "CAPTURADO"
+                  : "PENDIENTE"}
+              </div>
+            </div>
+                        <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr",
+                gap: 18,
+                maxWidth: 560,
+                margin: "0 auto",
+              }}
+            >
+              <AdminScoreRow
+                score={current?.homeScore ?? ""}
+                team={match.home}
+                flag={match.homeFlag}
+                onChange={(value) =>
+                  updateResult(match.id, "homeScore", value)
+                }
+              />
+
+              <div
+                style={{
+                  textAlign: "center",
+                  fontSize: 20,
+                  fontWeight: 900,
+                  color: "#FFCC00",
+                }}
+              >
+                VS
+              </div>
+
+              <AdminScoreRow
+                score={current?.awayScore ?? ""}
+                team={match.away}
+                flag={match.awayFlag}
+                onChange={(value) =>
+                  updateResult(match.id, "awayScore", value)
+                }
+              />
+            </div>
+
+            <div
+              style={{
+                marginTop: 26,
+                display: "flex",
+                justifyContent: "flex-end",
+              }}
+            >
+              <button
+                onClick={() => saveResult(match.id)}
+                disabled={savingMatchId === match.id}
+                style={{
+                  ...greenButton,
+                  opacity: savingMatchId === match.id ? 0.6 : 1,
+                  cursor:
+                    savingMatchId === match.id
+                      ? "not-allowed"
+                      : "pointer",
+                }}
+              >
+                {savingMatchId === match.id
+                  ? "Guardando..."
+                  : savedMatchId === match.id
+                  ? "✓ Guardado"
+                  : "Guardar resultado"}
+              </button>
+            </div>
+          </div>
+        );
+      })}
     </main>
   );
 }
 
-function Team({
-  name,
+function AdminScoreRow({
+  score,
+  team,
   flag,
+  onChange,
 }: {
-  name: string;
+  score: string;
+  team: string;
   flag: string;
+  onChange: (value: string) => void;
 }) {
   return (
     <div
       style={{
-        display: "flex",
-        alignItems: "center",
+        display: "grid",
+        gridTemplateColumns: "90px 64px 1fr",
         gap: 14,
+        alignItems: "center",
       }}
     >
+      <input
+        type="number"
+        min="0"
+        value={score}
+        onChange={(e) => onChange(e.target.value)}
+        style={scoreInput}
+      />
+
       <img
         src={`https://flagcdn.com/w80/${flag}.png`}
-        alt={name}
+        alt={team}
         style={{
-          width: 54,
-          height: 38,
+          width: 64,
+          height: 48,
           objectFit: "cover",
-          borderRadius: 8,
+          borderRadius: 10,
+          border: "1px solid rgba(255,255,255,0.12)",
         }}
       />
 
-      <div
+      <span
         style={{
+          fontSize: "clamp(22px,4vw,32px)",
           fontWeight: 900,
-          fontSize: 18,
         }}
       >
-        {name}
-      </div>
+        {team}
+      </span>
     </div>
   );
 }
 
-function AdminShell({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  return (
-    <main
-      style={{
-        minHeight: "100vh",
-        background:
-          "linear-gradient(rgba(0,0,0,0.78), rgba(0,0,0,0.94)), url('/worldcup-bg.jpg')",
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-        color: "white",
-        fontFamily: "sans-serif",
-        padding: "40px 16px",
-      }}
-    >
-      <section
-        style={{
-          maxWidth: 760,
-          margin: "80px auto",
-          padding: 32,
-          borderRadius: 24,
-          background: "rgba(0,0,0,0.82)",
-          border:
-            "1px solid rgba(255,255,255,0.14)",
-        }}
-      >
-        {children}
-      </section>
-    </main>
-  );
-}
-
-const primaryButton: React.CSSProperties = {
-  padding: "14px 22px",
-  borderRadius: 14,
-  background:
-    "linear-gradient(135deg, limegreen, #7CFC00)",
-  color: "black",
-  textDecoration: "none",
-  fontWeight: 900,
-};
-
-const adminSyncButton: React.CSSProperties = {
-  padding: "14px 22px",
-  borderRadius: 14,
-  background: "gold",
-  color: "black",
-  border: "none",
-  fontWeight: 900,
-};
-
-const secondaryButton: React.CSSProperties = {
-  padding: "14px 22px",
-  borderRadius: 14,
-  border: "1px solid rgba(255,255,255,0.12)",
-  background: "rgba(255,255,255,0.04)",
-  color: "white",
-  textDecoration: "none",
-  fontWeight: 800,
-};
-
-const scoreInput: React.CSSProperties = {
-  width: 78,
-  height: 64,
+const scoreInput = {
+  width: 86,
+  height: 72,
   borderRadius: 16,
-  border:
-    "1px solid rgba(255,255,255,0.14)",
-  background: "rgba(0,0,0,0.72)",
+  border: "1px solid rgba(255,255,255,.15)",
+  background: "rgba(0,0,0,.55)",
   color: "white",
+  textAlign: "center" as const,
   fontSize: 30,
   fontWeight: 900,
-  textAlign: "center",
   outline: "none",
 };
 
-const emptyCard: React.CSSProperties = {
-  padding: 50,
-  borderRadius: 24,
-  background: "rgba(0,0,0,0.78)",
-  textAlign: "center",
+const greenButton = {
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  padding: "14px 22px",
+  borderRadius: 16,
+  border: "none",
+  background: "linear-gradient(135deg, limegreen, #7CFC00)",
+  color: "black",
+  fontWeight: 900,
+  textDecoration: "none",
+};
+
+const yellowButton = {
+  ...greenButton,
+  background: "linear-gradient(135deg, #FFCC00, #FFE066)",
+};
+
+const darkButton = {
+  ...greenButton,
+  background: "rgba(255,255,255,.08)",
+  color: "white",
+  border: "1px solid rgba(255,255,255,.14)",
 };
