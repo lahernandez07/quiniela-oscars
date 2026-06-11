@@ -8,6 +8,11 @@ type AllowedUserRow = {
   email: string | null;
 };
 
+type ProfileRow = {
+  id: string;
+  name: string | null;
+};
+
 type PredictionRow = {
   user_id: string;
   match_id: number;
@@ -42,6 +47,17 @@ export async function GET() {
     );
   }
 
+  const { data: profiles, error: profilesError } = await supabase
+    .from("profiles")
+    .select("id, name");
+
+  if (profilesError) {
+    return NextResponse.json(
+      { error: profilesError.message },
+      { status: 500 }
+    );
+  }
+
   const { data: predictions, error: predictionsError } = await supabase
     .from("predictions_dev")
     .select("user_id, match_id");
@@ -52,6 +68,15 @@ export async function GET() {
       { status: 500 }
     );
   }
+
+  const nameByUser = new Map<string, string>();
+
+  (profiles as ProfileRow[] | null)?.forEach((profile) => {
+    nameByUser.set(
+      profile.id,
+      profile.name?.trim() || "Sin nombre"
+    );
+  });
 
   const countByUser = new Map<string, number>();
 
@@ -72,7 +97,10 @@ export async function GET() {
           : 0;
 
       return {
-        name: allowedUser.email ?? "Sin nombre",
+        name:
+          nameByUser.get(allowedUser.user_id) ||
+          allowedUser.email ||
+          "Sin nombre",
         captured,
         pending,
         progress,
