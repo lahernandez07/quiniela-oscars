@@ -162,12 +162,16 @@ export default function Navbar() {
             </Link>
 
             <Link href="/quiniela" style={primaryButton}>
-              Quiniela
-            </Link>
+  Quiniela
+</Link>
 
-            <Link href="/leaderboard" style={secondaryButton}>
-              Leaderboard
-            </Link>
+<Link href="/participation" style={secondaryButton}>
+  Participación
+</Link>
+
+<Link href="/leaderboard" style={secondaryButton}>
+  Leaderboard
+</Link>
 
             <button onClick={handleLogout} style={logoutButton}>
               Cerrar sesión
