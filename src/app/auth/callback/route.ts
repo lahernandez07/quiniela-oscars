@@ -36,5 +36,27 @@ export async function GET(request: Request) {
     return NextResponse.redirect(`${origin}/login?error=oauth_failed`);
   }
 
+  if (process.env.NEXT_PUBLIC_REGISTRATION_CLOSED === "true") {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return NextResponse.redirect(`${origin}/login?error=no_user`);
+    }
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (!profile) {
+      await supabase.auth.signOut();
+
+      return NextResponse.redirect(`${origin}/login?closed=true`);
+    }
+  }
+
   return NextResponse.redirect(`${origin}${next}`);
 }
