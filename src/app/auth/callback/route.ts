@@ -45,17 +45,17 @@ export async function GET(request: Request) {
       return NextResponse.redirect(`${origin}/login?error=no_user`);
     }
 
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("id")
-      .eq("id", user.id)
-      .maybeSingle();
+    const { data: allowedUser } = await supabase
+  .from("allowed_users")
+  .select("user_id")
+  .eq("user_id", user.id)
+  .maybeSingle();
 
-    if (!profile) {
-      await supabase.auth.signOut();
+if (!allowedUser) {
+  await supabase.auth.signOut();
 
-      return NextResponse.redirect(`${origin}/login?closed=true`);
-    }
+  return NextResponse.redirect(`${origin}/login?closed=true`);
+}
   }
 
   return NextResponse.redirect(`${origin}${next}`);
