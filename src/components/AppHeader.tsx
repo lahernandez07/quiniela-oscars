@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 
+const SESSION_LIMIT = 60 * 60 * 1000; // 60 minutos
+
 const ADMIN_EMAILS = [
   "la.hernandez07@gmail.com",
   "josetamezg@gmail.com",
@@ -30,9 +32,58 @@ export default function AppHeader() {
     }
 
     loadUser();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
+  useEffect(() => {
+    if (!user) return;
+
+    const loginStartedAtKey = `session-started-at-${user.id}`;
+
+    let loginStartedAt = localStorage.getItem(loginStartedAtKey);
+
+    if (!loginStartedAt) {
+      loginStartedAt = String(Date.now());
+      localStorage.setItem(loginStartedAtKey, loginStartedAt);
+    }
+
+    const elapsed = Date.now() - Number(loginStartedAt);
+    const remaining = SESSION_LIMIT - elapsed;
+
+    async function expireSession() {
+      localStorage.removeItem(loginStartedAtKey);
+      await supabase.auth.signOut();
+      window.location.href = "/";
+    }
+
+    if (remaining <= 0) {
+      expireSession();
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      expireSession();
+    }, remaining);
+
+    return () => {
+      window.clearTimeout(timeout);
+    };
+  }, [user]);
+
   async function handleLogout() {
+    if (user?.id) {
+      localStorage.removeItem(`session-started-at-${user.id}`);
+    }
+
     await supabase.auth.signOut();
     window.location.href = "/";
   }
@@ -73,15 +124,15 @@ export default function AppHeader() {
 
               <Link href="/pronosticos" className={goldButton}>
                 Pronósticos
-                </Link>
+              </Link>
 
-                <Link href="/participation" className={navButton}>
+              <Link href="/participation" className={navButton}>
                 Participación
-                </Link>
+              </Link>
 
-                <Link href="/leaderboard" className={navButton}>
+              <Link href="/leaderboard" className={navButton}>
                 Leaderboard
-                </Link>
+              </Link>
 
               {isAdmin && (
                 <Link href="/admin" className={adminButton}>
@@ -116,25 +167,25 @@ export default function AppHeader() {
             </Link>
 
             <Link
-  href="/pronosticos"
-  className={mobileGoldButton}
->
-  Pronósticos
-</Link>
+              href="/pronosticos"
+              className={mobileGoldButton}
+            >
+              Pronósticos
+            </Link>
 
-<Link
-  href="/participation"
-  className={mobileNavButton}
->
-  Participación
-</Link>
+            <Link
+              href="/participation"
+              className={mobileNavButton}
+            >
+              Participación
+            </Link>
 
-<Link
-  href="/leaderboard"
-  className={mobileNavButton}
->
-  Tabla
-</Link>
+            <Link
+              href="/leaderboard"
+              className={mobileNavButton}
+            >
+              Tabla
+            </Link>
 
             {isAdmin && (
               <Link
