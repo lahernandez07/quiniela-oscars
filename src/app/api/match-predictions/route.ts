@@ -14,35 +14,37 @@ function isMatchStarted(match: any) {
 
 export async function GET() {
   try {
-    // SOLO partidos que ya iniciaron
-    const closedMatches = matches.filter((match: any) =>
+    const startedMatches = matches.filter((match: any) =>
       isMatchStarted(match)
     );
 
     const response = [];
 
-    for (const match of closedMatches) {
-      // Obtener resultado
+    for (const match of startedMatches) {
       const { data: resultData } = await supabase
-        .from("match_results")
+        .from("results_dev")
         .select("*")
         .eq("match_id", match.id)
-        .single();
+        .maybeSingle();
 
-      // Obtener pronósticos
-      const { data: predictionsData } = await supabase
-        .from("predictions")
-        .select(
+      const { data: predictionsData, error: predictionsError } =
+        await supabase
+          .from("predictions_dev")
+          .select(
+            `
+            user_id,
+            home_score,
+            away_score,
+            profiles (
+              name
+            )
           `
-          user_id,
-          home_score,
-          away_score,
-          profiles (
-            display_name
           )
-        `
-        )
-        .eq("match_id", match.id);
+          .eq("match_id", match.id);
+
+      if (predictionsError) {
+        console.error("Error loading predictions:", predictionsError);
+      }
 
       const predictions =
         predictionsData?.map((prediction: any) => {
@@ -80,8 +82,7 @@ export async function GET() {
 
           return {
             user_id: prediction.user_id,
-            display_name:
-              prediction.profiles?.display_name || "Participante",
+            display_name: prediction.profiles?.name || "Participante",
             home_score: prediction.home_score,
             away_score: prediction.away_score,
             points,
