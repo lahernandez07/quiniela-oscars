@@ -18,6 +18,16 @@ export async function GET() {
       isMatchStarted(match)
     );
 
+    const { data: profiles } = await supabase
+      .from("profiles")
+      .select("id, name");
+
+    const nameByUser = new Map<string, string>();
+
+    profiles?.forEach((profile: any) => {
+      nameByUser.set(profile.id, profile.name || "Participante");
+    });
+
     const response = [];
 
     for (const match of startedMatches) {
@@ -30,16 +40,7 @@ export async function GET() {
       const { data: predictionsData, error: predictionsError } =
         await supabase
           .from("predictions_dev")
-          .select(
-            `
-            user_id,
-            home_score,
-            away_score,
-            profiles (
-              name
-            )
-          `
-          )
+          .select("user_id, home_score, away_score")
           .eq("match_id", match.id);
 
       if (predictionsError) {
@@ -82,7 +83,8 @@ export async function GET() {
 
           return {
             user_id: prediction.user_id,
-            display_name: prediction.profiles?.name || "Participante",
+            display_name:
+              nameByUser.get(prediction.user_id) || "Participante",
             home_score: prediction.home_score,
             away_score: prediction.away_score,
             points,
