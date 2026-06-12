@@ -41,7 +41,7 @@ export async function GET() {
         await supabase
           .from("predictions_dev")
           .select("user_id, home_score, away_score")
-          .eq("match_id", match.id);
+          .eq("match_id", Number(match.id));
 
       if (predictionsError) {
         console.error("Error loading predictions:", predictionsError);
@@ -90,6 +90,16 @@ export async function GET() {
             points,
             exact,
           };
+        })
+        ?.sort((a, b) => {
+          const pointsA = a.points ?? -1;
+          const pointsB = b.points ?? -1;
+
+          if (pointsB !== pointsA) {
+            return pointsB - pointsA;
+          }
+
+          return a.display_name.localeCompare(b.display_name);
         }) || [];
 
       response.push({
