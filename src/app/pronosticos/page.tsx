@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 type Prediction = {
   user_id: string;
@@ -33,6 +33,9 @@ type MatchPrediction = {
 export default function PronosticosPage() {
   const [matches, setMatches] = useState<MatchPrediction[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedGroup, setSelectedGroup] = useState("Todos");
+  const [selectedDate, setSelectedDate] = useState("Todos");
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
     async function loadPredictions() {
@@ -57,6 +60,38 @@ export default function PronosticosPage() {
     loadPredictions();
   }, []);
 
+  const groups = useMemo(() => {
+    return ["Todos", ...Array.from(new Set(matches.map((m) => m.group)))];
+  }, [matches]);
+
+  const dates = useMemo(() => {
+    return ["Todos", ...Array.from(new Set(matches.map((m) => m.date)))];
+  }, [matches]);
+
+  const filteredMatches = useMemo(() => {
+    return matches.filter((match) => {
+      const groupOk =
+        selectedGroup === "Todos" || match.group === selectedGroup;
+
+      const dateOk =
+        selectedDate === "Todos" || match.date === selectedDate;
+
+      const text = `${match.match_number} ${match.home_team} ${match.away_team} ${match.city} ${match.stadium} ${match.group}`.toLowerCase();
+
+      const searchOk =
+        search.trim() === "" || text.includes(search.toLowerCase());
+
+      return groupOk && dateOk && searchOk;
+    });
+  }, [matches, selectedGroup, selectedDate, search]);
+
+  function scrollToMatch(matchId: number) {
+    const element = document.getElementById(`match-${matchId}`);
+    if (element) {
+      element.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }
+
   if (loading) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-black text-white">
@@ -68,7 +103,7 @@ export default function PronosticosPage() {
   return (
     <main className="min-h-screen bg-gradient-to-b from-black via-zinc-900 to-black px-4 py-8 text-white">
       <div className="mx-auto max-w-7xl">
-        <div className="mb-10 text-center">
+        <div className="mb-8 text-center">
           <h1 className="text-4xl font-black text-yellow-400 md:text-5xl">
             Pronósticos Cerrados
           </h1>
@@ -79,17 +114,67 @@ export default function PronosticosPage() {
           </p>
         </div>
 
-        {matches.length === 0 && (
+        <section className="sticky top-[98px] z-30 mb-8 rounded-3xl border border-zinc-800 bg-black/90 p-4 shadow-2xl backdrop-blur md:top-[84px]">
+          <div className="grid gap-3 md:grid-cols-[220px_260px_1fr]">
+            <select
+              value={selectedGroup}
+              onChange={(e) => setSelectedGroup(e.target.value)}
+              className="rounded-2xl border border-zinc-700 bg-zinc-950 px-4 py-3 font-bold text-white"
+            >
+              {groups.map((group) => (
+                <option key={group}>{group}</option>
+              ))}
+            </select>
+
+            <select
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              className="rounded-2xl border border-zinc-700 bg-zinc-950 px-4 py-3 font-bold text-white"
+            >
+              {dates.map((date) => (
+                <option key={date} value={date}>
+                  {date === "Todos" ? "Todas las fechas" : formatDate(date)}
+                </option>
+              ))}
+            </select>
+
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Buscar partido, equipo, ciudad o estadio..."
+              className="rounded-2xl border border-zinc-700 bg-zinc-950 px-4 py-3 font-bold text-white placeholder:text-zinc-500"
+            />
+          </div>
+
+          <div className="mt-4 flex gap-2 overflow-x-auto pb-1">
+            {filteredMatches.map((match) => (
+              <button
+                key={`quick-${match.match_id}`}
+                onClick={() => scrollToMatch(match.match_id)}
+                className="shrink-0 rounded-full border border-yellow-400/40 bg-yellow-400/10 px-4 py-2 text-sm font-black text-yellow-300"
+              >
+                #{match.match_number}
+              </button>
+            ))}
+          </div>
+
+          <div className="mt-3 text-sm font-bold text-zinc-400">
+            {filteredMatches.length} partidos visibles
+          </div>
+        </section>
+
+        {filteredMatches.length === 0 && (
           <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-8 text-center text-zinc-400">
-            Todavía no hay partidos cerrados con pronósticos disponibles.
+            No hay partidos que coincidan con los filtros seleccionados.
           </div>
         )}
 
         <div className="space-y-8">
-          {matches.map((match) => (
+          {filteredMatches.map((match) => (
             <div
+              id={`match-${match.match_id}`}
               key={match.match_id}
-              className="overflow-hidden rounded-3xl border border-zinc-800 bg-zinc-900 shadow-2xl"
+              className="scroll-mt-40 overflow-hidden rounded-3xl border border-zinc-800 bg-zinc-900 shadow-2xl"
             >
               <div className="bg-gradient-to-r from-yellow-500 to-yellow-600 px-5 py-5 text-black md:px-6">
                 <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -105,7 +190,8 @@ export default function PronosticosPage() {
                     </h2>
 
                     <p className="mt-2 text-sm font-semibold">
-                      {match.date} · {match.time} · {match.city}
+                      {formatDate(match.date)} · {match.time} CDMX ·{" "}
+                      {match.city}
                     </p>
 
                     <p className="mt-1 text-xs font-medium opacity-80">
@@ -120,8 +206,7 @@ export default function PronosticosPage() {
                       </p>
 
                       <p className="text-4xl font-black">
-                        {match.result.home_score} -{" "}
-                        {match.result.away_score}
+                        {match.result.home_score} - {match.result.away_score}
                       </p>
                     </div>
                   ) : (
@@ -142,7 +227,6 @@ export default function PronosticosPage() {
                 </div>
               ) : (
                 <>
-                  {/* MOBILE CARDS */}
                   <div className="block divide-y divide-zinc-800 md:hidden">
                     {match.predictions.map((prediction) => (
                       <div
@@ -173,17 +257,7 @@ export default function PronosticosPage() {
                             <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500">
                               Puntos
                             </p>
-                            <p
-                              className={`mt-1 text-2xl font-black ${
-                                prediction.points === 3
-                                  ? "text-green-400"
-                                  : prediction.points === 1
-                                    ? "text-yellow-400"
-                                    : prediction.points === 0
-                                      ? "text-red-400"
-                                      : "text-zinc-500"
-                              }`}
-                            >
+                            <p className={`mt-1 text-2xl font-black ${pointsColor(prediction.points)}`}>
                               {prediction.points ?? "-"}
                             </p>
                           </div>
@@ -201,7 +275,6 @@ export default function PronosticosPage() {
                     ))}
                   </div>
 
-                  {/* DESKTOP TABLE */}
                   <div className="hidden md:block">
                     <table className="w-full">
                       <thead className="bg-zinc-800 text-sm uppercase text-zinc-300">
@@ -209,18 +282,11 @@ export default function PronosticosPage() {
                           <th className="px-6 py-4 text-left">
                             Participante
                           </th>
-
                           <th className="px-6 py-4 text-center">
                             Pronóstico
                           </th>
-
-                          <th className="px-6 py-4 text-center">
-                            Puntos
-                          </th>
-
-                          <th className="px-6 py-4 text-center">
-                            Exacto
-                          </th>
+                          <th className="px-6 py-4 text-center">Puntos</th>
+                          <th className="px-6 py-4 text-center">Exacto</th>
                         </tr>
                       </thead>
 
@@ -229,9 +295,7 @@ export default function PronosticosPage() {
                           <tr
                             key={`${match.match_id}-${prediction.user_id}`}
                             className={`border-t border-zinc-800 ${
-                              index % 2 === 0
-                                ? "bg-zinc-900"
-                                : "bg-zinc-950"
+                              index % 2 === 0 ? "bg-zinc-900" : "bg-zinc-950"
                             }`}
                           >
                             <td className="px-6 py-4 font-semibold">
@@ -247,15 +311,9 @@ export default function PronosticosPage() {
 
                             <td className="px-6 py-4 text-center">
                               <span
-                                className={`text-2xl font-black ${
-                                  prediction.points === 3
-                                    ? "text-green-400"
-                                    : prediction.points === 1
-                                      ? "text-yellow-400"
-                                      : prediction.points === 0
-                                        ? "text-red-400"
-                                        : "text-zinc-500"
-                                }`}
+                                className={`text-2xl font-black ${pointsColor(
+                                  prediction.points
+                                )}`}
                               >
                                 {prediction.points ?? "-"}
                               </span>
@@ -281,4 +339,19 @@ export default function PronosticosPage() {
       </div>
     </main>
   );
+}
+
+function pointsColor(points: number | null) {
+  if (points === 3) return "text-green-400";
+  if (points === 1) return "text-yellow-400";
+  if (points === 0) return "text-red-400";
+  return "text-zinc-500";
+}
+
+function formatDate(date: string) {
+  return new Intl.DateTimeFormat("es-MX", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  }).format(new Date(`${date}T12:00:00`));
 }
