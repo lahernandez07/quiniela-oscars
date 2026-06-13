@@ -116,6 +116,9 @@ export default function AppHeader() {
               <Link href="/calendario" className={navButton}>
                 Calendario
               </Link>
+              <Link href="/grupos" className={navButton}>
+                Grupos
+              </Link>
 
               <Link href="/pronosticos" className={goldButton}>
                 Pronósticos
@@ -156,6 +159,10 @@ export default function AppHeader() {
 
             <Link href="/calendario" className={mobileNavButton}>
               Calendario
+            </Link>
+
+            <Link href="/grupos" className={mobileNavButton}>
+            Grupos
             </Link>
 
             <Link href="/pronosticos" className={mobileGoldButton}>
