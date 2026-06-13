@@ -157,9 +157,17 @@ export default function CalendarioPage() {
                   </div>
 
                   <div className="teams">
-                    <div>{match.home}</div>
-                    <div className="vs">VS</div>
-                    <div>{match.away}</div>
+                  <div>
+                  <span className="flag">{flagEmoji(match.homeFlag)}</span>
+                  {match.home}
+                  </div>
+
+                  <div className="vs">VS</div>
+
+                  <div>
+                  <span className="flag">{flagEmoji(match.awayFlag)}</span>
+                  {match.away}
+                  </div>
                   </div>
 
                   <div className="time">{match.time} CDMX</div>
@@ -329,11 +337,21 @@ export default function CalendarioPage() {
         }
 
         .teams {
-          text-align: center;
-          font-size: 20px;
-          font-weight: 900;
-        }
+            text-align: center;
+            font-size: 20px;
+            font-weight: 900;
+              }
 
+              .teams div {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                gap: 8px;
+              }
+
+.flag {
+  font-size: 26px;
+}
         .vs {
           color: gold;
           margin: 8px 0;
@@ -390,4 +408,21 @@ function formatDate(date: string) {
     day: "numeric",
     month: "long",
   }).format(new Date(`${date}T12:00:00`));
+}
+function flagEmoji(code: string) {
+  const specialFlags: Record<string, string> = {
+    "gb-eng": "🏴",
+    "gb-sct": "🏴",
+    un: "🏳️",
+  };
+
+  if (specialFlags[code]) {
+    return specialFlags[code];
+  }
+
+  return code
+    .toUpperCase()
+    .replace(/./g, (char) =>
+      String.fromCodePoint(127397 + char.charCodeAt(0))
+    );
 }
