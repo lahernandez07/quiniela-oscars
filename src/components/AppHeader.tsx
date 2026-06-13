@@ -119,12 +119,16 @@ export default function AppHeader() {
           {!loading && user && (
             <>
               <Link href="/quiniela" className={primaryButton}>
-                Quiniela
+               Quiniela
+              </Link>
+
+              <Link href="/calendario" className={navButton}>
+              Calendario
               </Link>
 
               <Link href="/pronosticos" className={goldButton}>
-                Pronósticos
-              </Link>
+              Pronósticos
+            </Link>
 
               <Link href="/participation" className={navButton}>
                 Participación
@@ -160,18 +164,25 @@ export default function AppHeader() {
         {!loading && user && (
           <>
             <Link
-              href="/quiniela"
-              className={mobilePrimaryButton}
-            >
-              Quiniela
-            </Link>
+  href="/quiniela"
+  className={mobilePrimaryButton}
+>
+  Quiniela
+</Link>
 
-            <Link
-              href="/pronosticos"
-              className={mobileGoldButton}
-            >
-              Pronósticos
-            </Link>
+<Link
+  href="/calendario"
+  className={mobileNavButton}
+>
+  Calendario
+</Link>
+
+<Link
+  href="/pronosticos"
+  className={mobileGoldButton}
+>
+  Pronósticos
+</Link>
 
             <Link
               href="/participation"
