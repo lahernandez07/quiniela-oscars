@@ -82,7 +82,9 @@ export default function LeaderboardPage() {
 
                   <div className="big-score">{row.total}</div>
 
-                  <div className="exactos">Exactos: {row.exact_scores}</div>
+                  <div className="exactos">
+                    Marcadores exactos: {row.exact_scores}
+                  </div>
                 </article>
               ))}
             </section>
@@ -93,11 +95,11 @@ export default function LeaderboardPage() {
                   <tr>
                     <th>#</th>
                     <th>Participante</th>
-                    <th>Semana 1</th>
-                    <th>Semana 2</th>
-                    <th>Semana 3</th>
+                    <th>Sem 1</th>
+                    <th>Sem 2</th>
+                    <th>Sem 3</th>
                     <th>Total</th>
-                    <th>Exactos</th>
+                    <th>Marcadores exactos</th>
                   </tr>
                 </thead>
 
@@ -112,11 +114,11 @@ export default function LeaderboardPage() {
                         <strong>{row.display_name}</strong>
                       </td>
 
-                      <td>{row.cut1}</td>
-                      <td>{row.cut2}</td>
-                      <td>{row.cut3}</td>
+                      <td>{row.cut1} pts</td>
+                      <td>{row.cut2} pts</td>
+                      <td>{row.cut3} pts</td>
 
-                      <td className="total-cell">{row.total}</td>
+                      <td className="total-cell">{row.total} pts</td>
 
                       <td>{row.exact_scores}</td>
                     </tr>
@@ -133,27 +135,30 @@ export default function LeaderboardPage() {
 
                     <div className="mobile-name">{row.display_name}</div>
 
-                    <div className="mobile-total">{row.total}</div>
+                    <div className="mobile-total">
+                      <span>Total</span>
+                      <strong>{row.total}</strong>
+                    </div>
                   </div>
 
                   <div className="mobile-stats">
                     <div>
-                      <span>Semana 1</span>
-                      <strong>{row.cut1}</strong>
+                      <span>Sem 1</span>
+                      <strong>{row.cut1} pts</strong>
                     </div>
 
                     <div>
-                      <span>Semana 2</span>
-                      <strong>{row.cut2}</strong>
+                      <span>Sem 2</span>
+                      <strong>{row.cut2} pts</strong>
                     </div>
 
                     <div>
-                      <span>Semana 3</span>
-                      <strong>{row.cut3}</strong>
+                      <span>Sem 3</span>
+                      <strong>{row.cut3} pts</strong>
                     </div>
 
                     <div>
-                      <span>Exactos</span>
+                      <span>Marcadores exactos</span>
                       <strong>{row.exact_scores}</strong>
                     </div>
                   </div>
@@ -414,15 +419,25 @@ export default function LeaderboardPage() {
           }
 
           .mobile-total {
-            min-width: 52px;
-            height: 52px;
+            min-width: 62px;
+            height: 62px;
             border-radius: 999px;
             display: grid;
             place-items: center;
             background: linear-gradient(135deg, limegreen, #7cfc00);
             color: black;
             font-weight: 1000;
-            font-size: 22px;
+            line-height: 1;
+          }
+
+          .mobile-total span {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+          }
+
+          .mobile-total strong {
+            font-size: 24px;
           }
 
           .mobile-stats {
