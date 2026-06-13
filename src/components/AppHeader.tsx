@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 
-const SESSION_LIMIT = 60 * 60 * 1000; // 60 minutos
+const SESSION_LIMIT = 60 * 60 * 1000;
 
 const ADMIN_EMAILS = [
   "la.hernandez07@gmail.com",
@@ -13,7 +13,6 @@ const ADMIN_EMAILS = [
 
 export default function AppHeader() {
   const supabase = supabaseBrowser();
-
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -39,16 +38,13 @@ export default function AppHeader() {
       setUser(session?.user ?? null);
     });
 
-    return () => {
-      subscription.unsubscribe();
-    };
+    return () => subscription.unsubscribe();
   }, []);
 
   useEffect(() => {
     if (!user) return;
 
     const loginStartedAtKey = `session-started-at-${user.id}`;
-
     let loginStartedAt = localStorage.getItem(loginStartedAtKey);
 
     if (!loginStartedAt) {
@@ -70,13 +66,9 @@ export default function AppHeader() {
       return;
     }
 
-    const timeout = window.setTimeout(() => {
-      expireSession();
-    }, remaining);
+    const timeout = window.setTimeout(expireSession, remaining);
 
-    return () => {
-      window.clearTimeout(timeout);
-    };
+    return () => window.clearTimeout(timeout);
   }, [user]);
 
   async function handleLogout() {
@@ -110,7 +102,6 @@ export default function AppHeader() {
           </div>
         </Link>
 
-        {/* DESKTOP */}
         <nav className="hidden items-center gap-2 md:flex">
           <Link href="/" className={navButton}>
             Inicio
@@ -119,16 +110,16 @@ export default function AppHeader() {
           {!loading && user && (
             <>
               <Link href="/quiniela" className={primaryButton}>
-               Quiniela
+                Quiniela
               </Link>
 
               <Link href="/calendario" className={navButton}>
-              Calendario
+                Calendario
               </Link>
 
               <Link href="/pronosticos" className={goldButton}>
-              Pronósticos
-            </Link>
+                Pronósticos
+              </Link>
 
               <Link href="/participation" className={navButton}>
                 Participación
@@ -144,10 +135,7 @@ export default function AppHeader() {
                 </Link>
               )}
 
-              <button
-                onClick={handleLogout}
-                className={logoutButton}
-              >
+              <button onClick={handleLogout} className={logoutButton}>
                 Cerrar sesión
               </button>
             </>
@@ -155,7 +143,6 @@ export default function AppHeader() {
         </nav>
       </div>
 
-      {/* MOBILE */}
       <nav className="flex gap-2 overflow-x-auto border-t border-white/10 px-4 py-3 md:hidden">
         <Link href="/" className={mobileNavButton}>
           Inicio
@@ -163,54 +150,33 @@ export default function AppHeader() {
 
         {!loading && user && (
           <>
-            <Link
-  href="/quiniela"
-  className={mobilePrimaryButton}
->
-  Quiniela
-</Link>
+            <Link href="/quiniela" className={mobilePrimaryButton}>
+              Quiniela
+            </Link>
 
-<Link
-  href="/calendario"
-  className={mobileNavButton}
->
-  Calendario
-</Link>
+            <Link href="/calendario" className={mobileNavButton}>
+              Calendario
+            </Link>
 
-<Link
-  href="/pronosticos"
-  className={mobileGoldButton}
->
-  Pronósticos
-</Link>
+            <Link href="/pronosticos" className={mobileGoldButton}>
+              Pronósticos
+            </Link>
 
-            <Link
-              href="/participation"
-              className={mobileNavButton}
-            >
+            <Link href="/participation" className={mobileNavButton}>
               Participación
             </Link>
 
-            <Link
-              href="/leaderboard"
-              className={mobileNavButton}
-            >
+            <Link href="/leaderboard" className={mobileNavButton}>
               Tabla
             </Link>
 
             {isAdmin && (
-              <Link
-                href="/admin"
-                className={mobileAdminButton}
-              >
+              <Link href="/admin" className={mobileAdminButton}>
                 Admin
               </Link>
             )}
 
-            <button
-              onClick={handleLogout}
-              className={mobileLogoutButton}
-            >
+            <button onClick={handleLogout} className={mobileLogoutButton}>
               Salir
             </button>
           </>
