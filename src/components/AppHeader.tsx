@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 
@@ -13,12 +14,18 @@ const ADMIN_EMAILS = [
 
 export default function AppHeader() {
   const supabase = supabaseBrowser();
+  const pathname = usePathname();
+
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   const isAdmin =
     !!user?.email &&
     ADMIN_EMAILS.includes(user.email.toLowerCase());
+
+  function isActive(path: string) {
+    return pathname === path;
+  }
 
   useEffect(() => {
     async function loadUser() {
@@ -93,7 +100,7 @@ export default function AppHeader() {
 
           <div className="min-w-0">
             <div className="truncate text-base font-black md:text-lg">
-              Panteras Del ICC
+              Panteras del ICC
             </div>
 
             <div className="truncate text-[10px] font-extrabold tracking-widest text-zinc-400 md:text-xs">
@@ -103,37 +110,74 @@ export default function AppHeader() {
         </Link>
 
         <nav className="hidden items-center gap-2 md:flex">
-          <Link href="/" className={navButton}>
+          <Link
+            href="/"
+            className={isActive("/") ? activePrimaryButton : navButton}
+          >
             Inicio
           </Link>
 
           {!loading && user && (
             <>
-              <Link href="/quiniela" className={primaryButton}>
+              <Link
+                href="/quiniela"
+                className={
+                  isActive("/quiniela") ? activePrimaryButton : navButton
+                }
+              >
                 Quiniela
               </Link>
 
-              <Link href="/calendario" className={navButton}>
+              <Link
+                href="/calendario"
+                className={
+                  isActive("/calendario") ? activePrimaryButton : navButton
+                }
+              >
                 Calendario
               </Link>
-              <Link href="/grupos" className={navButton}>
+
+              <Link
+                href="/grupos"
+                className={
+                  isActive("/grupos") ? activePrimaryButton : navButton
+                }
+              >
                 Grupos
               </Link>
 
-              <Link href="/pronosticos" className={goldButton}>
+              <Link
+                href="/pronosticos"
+                className={
+                  isActive("/pronosticos") ? activeGoldButton : navButton
+                }
+              >
                 Pronósticos
               </Link>
 
-              <Link href="/participation" className={navButton}>
+              <Link
+                href="/participation"
+                className={
+                  isActive("/participation") ? activePrimaryButton : navButton
+                }
+              >
                 Participación
               </Link>
 
-              <Link href="/leaderboard" className={navButton}>
+              <Link
+                href="/leaderboard"
+                className={
+                  isActive("/leaderboard") ? activePrimaryButton : navButton
+                }
+              >
                 Leaderboard
               </Link>
 
               {isAdmin && (
-                <Link href="/admin" className={adminButton}>
+                <Link
+                  href="/admin"
+                  className={isActive("/admin") ? activeGoldButton : navButton}
+                >
                   Admin
                 </Link>
               )}
@@ -147,38 +191,90 @@ export default function AppHeader() {
       </div>
 
       <nav className="flex gap-2 overflow-x-auto border-t border-white/10 px-4 py-3 md:hidden">
-        <Link href="/" className={mobileNavButton}>
+        <Link
+          href="/"
+          className={isActive("/") ? mobileActivePrimaryButton : mobileNavButton}
+        >
           Inicio
         </Link>
 
         {!loading && user && (
           <>
-            <Link href="/quiniela" className={mobilePrimaryButton}>
+            <Link
+              href="/quiniela"
+              className={
+                isActive("/quiniela")
+                  ? mobileActivePrimaryButton
+                  : mobileNavButton
+              }
+            >
               Quiniela
             </Link>
 
-            <Link href="/calendario" className={mobileNavButton}>
+            <Link
+              href="/calendario"
+              className={
+                isActive("/calendario")
+                  ? mobileActivePrimaryButton
+                  : mobileNavButton
+              }
+            >
               Calendario
             </Link>
 
-            <Link href="/grupos" className={mobileNavButton}>
-            Grupos
+            <Link
+              href="/grupos"
+              className={
+                isActive("/grupos")
+                  ? mobileActivePrimaryButton
+                  : mobileNavButton
+              }
+            >
+              Grupos
             </Link>
 
-            <Link href="/pronosticos" className={mobileGoldButton}>
+            <Link
+              href="/pronosticos"
+              className={
+                isActive("/pronosticos")
+                  ? mobileActiveGoldButton
+                  : mobileNavButton
+              }
+            >
               Pronósticos
             </Link>
 
-            <Link href="/participation" className={mobileNavButton}>
+            <Link
+              href="/participation"
+              className={
+                isActive("/participation")
+                  ? mobileActivePrimaryButton
+                  : mobileNavButton
+              }
+            >
               Participación
             </Link>
 
-            <Link href="/leaderboard" className={mobileNavButton}>
+            <Link
+              href="/leaderboard"
+              className={
+                isActive("/leaderboard")
+                  ? mobileActivePrimaryButton
+                  : mobileNavButton
+              }
+            >
               Tabla
             </Link>
 
             {isAdmin && (
-              <Link href="/admin" className={mobileAdminButton}>
+              <Link
+                href="/admin"
+                className={
+                  isActive("/admin")
+                    ? mobileActiveGoldButton
+                    : mobileNavButton
+                }
+              >
                 Admin
               </Link>
             )}
@@ -194,31 +290,25 @@ export default function AppHeader() {
 }
 
 const navButton =
-  "rounded-full border border-white/20 bg-white/5 px-5 py-3 font-extrabold text-white no-underline";
+  "rounded-full border border-white/20 bg-black px-5 py-3 font-extrabold text-white no-underline";
 
-const primaryButton =
-  "rounded-full border border-lime-400 bg-lime-400 px-5 py-3 font-black text-black no-underline";
+const activePrimaryButton =
+  "rounded-full border border-lime-400 bg-lime-400 px-5 py-3 font-black text-black no-underline shadow-lg shadow-lime-400/20";
 
-const goldButton =
-  "rounded-full border border-yellow-400 bg-yellow-400 px-5 py-3 font-black text-black no-underline";
-
-const adminButton =
-  "rounded-full border border-yellow-300 bg-yellow-300 px-5 py-3 font-black text-black no-underline";
+const activeGoldButton =
+  "rounded-full border border-yellow-400 bg-yellow-400 px-5 py-3 font-black text-black no-underline shadow-lg shadow-yellow-400/20";
 
 const logoutButton =
   "rounded-full border border-red-500/40 bg-red-500/10 px-5 py-3 font-black text-red-200";
 
 const mobileNavButton =
-  "shrink-0 rounded-full border border-white/20 bg-white/5 px-4 py-2 text-sm font-extrabold text-white no-underline";
+  "shrink-0 rounded-full border border-white/20 bg-black px-4 py-2 text-sm font-extrabold text-white no-underline";
 
-const mobilePrimaryButton =
+const mobileActivePrimaryButton =
   "shrink-0 rounded-full border border-lime-400 bg-lime-400 px-4 py-2 text-sm font-black text-black no-underline";
 
-const mobileGoldButton =
+const mobileActiveGoldButton =
   "shrink-0 rounded-full border border-yellow-400 bg-yellow-400 px-4 py-2 text-sm font-black text-black no-underline";
-
-const mobileAdminButton =
-  "shrink-0 rounded-full border border-yellow-300 bg-yellow-300 px-4 py-2 text-sm font-black text-black no-underline";
 
 const mobileLogoutButton =
   "shrink-0 rounded-full border border-red-500/40 bg-red-500/10 px-4 py-2 text-sm font-black text-red-200";
