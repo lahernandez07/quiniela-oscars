@@ -114,7 +114,7 @@ export default function PronosticosPage() {
           </p>
         </div>
 
-        <section className="sticky top-[98px] z-30 mb-8 rounded-3xl border border-zinc-800 bg-black/90 p-4 shadow-2xl backdrop-blur md:top-[84px]">
+        <section className="mb-8 rounded-3xl border border-zinc-800 bg-black/90 p-4 shadow-2xl backdrop-blur">
           <div className="grid gap-3 md:grid-cols-[220px_260px_1fr]">
             <select
               value={selectedGroup}
