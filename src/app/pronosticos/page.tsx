@@ -33,6 +33,7 @@ type MatchPrediction = {
 export default function PronosticosPage() {
   const [matches, setMatches] = useState<MatchPrediction[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedCut, setSelectedCut] = useState("Todos");
   const [selectedGroup, setSelectedGroup] = useState("Todos");
   const [selectedDate, setSelectedDate] = useState("Todos");
   const [search, setSearch] = useState("");
@@ -68,8 +69,17 @@ export default function PronosticosPage() {
     return ["Todos", ...Array.from(new Set(matches.map((m) => m.date)))];
   }, [matches]);
 
+  function getCut(matchNumber: number) {
+    if (matchNumber <= 12) return "1";
+    if (matchNumber <= 24) return "2";
+    return "3";
+  }
+
   const filteredMatches = useMemo(() => {
     return matches.filter((match) => {
+      const cutOk =
+        selectedCut === "Todos" || getCut(match.match_number) === selectedCut;
+
       const groupOk =
         selectedGroup === "Todos" || match.group === selectedGroup;
 
@@ -81,9 +91,9 @@ export default function PronosticosPage() {
       const searchOk =
         search.trim() === "" || text.includes(search.toLowerCase());
 
-      return groupOk && dateOk && searchOk;
+      return cutOk && groupOk && dateOk && searchOk;
     });
-  }, [matches, selectedGroup, selectedDate, search]);
+  }, [matches, selectedCut, selectedGroup, selectedDate, search]);
 
   function scrollToMatch(matchId: number) {
     const element = document.getElementById(`match-${matchId}`);
@@ -113,8 +123,24 @@ export default function PronosticosPage() {
             partido ya inició.
           </p>
         </div>
+                <section className="mb-8 rounded-3xl border border-zinc-800 bg-black/90 p-4 shadow-2xl backdrop-blur">
+          <div className="mb-4 flex flex-wrap gap-2">
+            {["Todos", "1", "2", "3"].map((cut) => (
+              <button
+                key={cut}
+                type="button"
+                onClick={() => setSelectedCut(cut)}
+                className={
+                  selectedCut === cut
+                    ? "rounded-full bg-yellow-400 px-4 py-2 text-sm font-black text-black shadow-lg shadow-yellow-400/20"
+                    : "rounded-full border border-zinc-700 bg-zinc-900 px-4 py-2 text-sm font-black text-white"
+                }
+              >
+                {cut === "Todos" ? "Todas" : `Semana ${cut}`}
+              </button>
+            ))}
+          </div>
 
-        <section className="mb-8 rounded-3xl border border-zinc-800 bg-black/90 p-4 shadow-2xl backdrop-blur">
           <div className="grid gap-3 md:grid-cols-[220px_260px_1fr]">
             <select
               value={selectedGroup}
@@ -220,8 +246,7 @@ export default function PronosticosPage() {
                   )}
                 </div>
               </div>
-
-              {match.predictions.length === 0 ? (
+                            {match.predictions.length === 0 ? (
                 <div className="py-10 text-center text-zinc-500">
                   Sin pronósticos registrados
                 </div>
@@ -257,7 +282,11 @@ export default function PronosticosPage() {
                             <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500">
                               Puntos
                             </p>
-                            <p className={`mt-1 text-2xl font-black ${pointsColor(prediction.points)}`}>
+                            <p
+                              className={`mt-1 text-2xl font-black ${pointsColor(
+                                prediction.points
+                              )}`}
+                            >
                               {prediction.points ?? "-"}
                             </p>
                           </div>
