@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 type SummaryRow = {
   user_id: string;
@@ -13,21 +13,36 @@ type SummaryRow = {
   exact_scores: number;
 };
 
+type ViewMode = "general" | "1" | "2" | "3";
+
 export default function LeaderboardPage() {
   const [rows, setRows] = useState<SummaryRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  const [viewMode, setViewMode] = useState<ViewMode>("general");
 
   useEffect(() => {
     async function loadLeaderboard() {
       try {
         setLoading(true);
+        setError(false);
 
-        const response = await fetch("/api/leaderboard?view=summary");
+        const response = await fetch("/api/leaderboard?view=summary", {
+          cache: "no-store",
+        });
+
         const json = await response.json();
 
+        if (!response.ok) {
+          throw new Error(json?.error || "Error cargando leaderboard");
+        }
+
         setRows(Array.isArray(json) ? json : []);
-      } catch (error) {
-        console.error(error);
+      } catch (err) {
+        console.error(err);
+        setError(true);
+        setRows([]);
       } finally {
         setLoading(false);
       }
@@ -35,6 +50,22 @@ export default function LeaderboardPage() {
 
     loadLeaderboard();
   }, []);
+
+  const sortedRows = useMemo(() => {
+    return [...rows].sort((a, b) => {
+      const pointsA = getVisiblePoints(a, viewMode);
+      const pointsB = getVisiblePoints(b, viewMode);
+
+      if (pointsB !== pointsA) {
+        return pointsB - pointsA;
+      }
+
+      return b.exact_scores - a.exact_scores;
+    });
+  }, [rows, viewMode]);
+
+  const titleLabel =
+    viewMode === "general" ? "Acumulado" : `Semana ${viewMode}`;
 
   return (
     <main className="leaderboard-page">
@@ -46,8 +77,8 @@ export default function LeaderboardPage() {
             <h1>Leaderboard Mundial 2026</h1>
 
             <p>
-              Consulta el rendimiento acumulado por cortes semanales y el
-              puntaje total del torneo.
+              Consulta el rendimiento acumulado o el ranking específico por
+              semana.
             </p>
           </div>
 
@@ -62,16 +93,42 @@ export default function LeaderboardPage() {
           </nav>
         </header>
 
+        <section className="weekly-filter">
+          {[
+            { value: "general", label: "Acumulado" },
+            { value: "1", label: "Semana 1" },
+            { value: "2", label: "Semana 2" },
+            { value: "3", label: "Semana 3" },
+          ].map((item) => (
+            <button
+              key={item.value}
+              type="button"
+              onClick={() => setViewMode(item.value as ViewMode)}
+              className={viewMode === item.value ? "active" : ""}
+            >
+              {item.label}
+            </button>
+          ))}
+        </section>
+
+        <div className="view-label">
+          Mostrando ranking: <strong>{titleLabel}</strong>
+        </div>
+
         {loading ? (
           <div className="loading-card">Cargando leaderboard...</div>
-        ) : rows.length === 0 ? (
+        ) : error ? (
+          <div className="loading-card">
+            No se pudo cargar el leaderboard.
+          </div>
+        ) : sortedRows.length === 0 ? (
           <div className="loading-card">
             Todavía no hay resultados registrados.
           </div>
         ) : (
           <>
             <section className="podium-grid">
-              {rows.slice(0, 3).map((row, index) => (
+              {sortedRows.slice(0, 3).map((row, index) => (
                 <article
                   key={row.user_id}
                   className={`podium-card ${index === 0 ? "first" : ""}`}
@@ -80,16 +137,22 @@ export default function LeaderboardPage() {
 
                   <h2>{row.display_name}</h2>
 
-                  <div className="big-score">{row.total}</div>
+                  <div className="big-score">
+                    {getVisiblePoints(row, viewMode)}
+                  </div>
 
                   <div className="exactos">
-                    Marcadores exactos: {row.exact_scores}
+                    {viewMode === "general"
+                      ? `Marcadores exactos: ${row.exact_scores}`
+                      : `${titleLabel}: ${getVisiblePoints(
+                          row,
+                          viewMode
+                        )} pts`}
                   </div>
                 </article>
               ))}
             </section>
-
-            <section className="desktop-table-card">
+                        <section className="desktop-table-card">
               <table>
                 <thead>
                   <tr>
@@ -98,13 +161,13 @@ export default function LeaderboardPage() {
                     <th>Sem 1</th>
                     <th>Sem 2</th>
                     <th>Sem 3</th>
-                    <th>Total</th>
+                    <th>{viewMode === "general" ? "Total" : titleLabel}</th>
                     <th>Marcadores exactos</th>
                   </tr>
                 </thead>
 
                 <tbody>
-                  {rows.map((row, index) => (
+                  {sortedRows.map((row, index) => (
                     <tr key={row.user_id}>
                       <td>
                         <strong>#{index + 1}</strong>
@@ -114,11 +177,21 @@ export default function LeaderboardPage() {
                         <strong>{row.display_name}</strong>
                       </td>
 
-                      <td>{row.cut1} pts</td>
-                      <td>{row.cut2} pts</td>
-                      <td>{row.cut3} pts</td>
+                      <td className={viewMode === "1" ? "selected-week" : ""}>
+                        {row.cut1} pts
+                      </td>
 
-                      <td className="total-cell">{row.total} pts</td>
+                      <td className={viewMode === "2" ? "selected-week" : ""}>
+                        {row.cut2} pts
+                      </td>
+
+                      <td className={viewMode === "3" ? "selected-week" : ""}>
+                        {row.cut3} pts
+                      </td>
+
+                      <td className="total-cell">
+                        {getVisiblePoints(row, viewMode)} pts
+                      </td>
 
                       <td>{row.exact_scores}</td>
                     </tr>
@@ -128,7 +201,7 @@ export default function LeaderboardPage() {
             </section>
 
             <section className="mobile-list">
-              {rows.map((row, index) => (
+              {sortedRows.map((row, index) => (
                 <article key={row.user_id} className="mobile-card">
                   <div className="mobile-card-top">
                     <div className="mobile-rank">#{index + 1}</div>
@@ -136,23 +209,25 @@ export default function LeaderboardPage() {
                     <div className="mobile-name">{row.display_name}</div>
 
                     <div className="mobile-total">
-                      <span>Total</span>
-                      <strong>{row.total}</strong>
+                      <span>
+                        {viewMode === "general" ? "Total" : `Sem ${viewMode}`}
+                      </span>
+                      <strong>{getVisiblePoints(row, viewMode)}</strong>
                     </div>
                   </div>
 
                   <div className="mobile-stats">
-                    <div>
+                    <div className={viewMode === "1" ? "selected-box" : ""}>
                       <span>Sem 1</span>
                       <strong>{row.cut1} pts</strong>
                     </div>
 
-                    <div>
+                    <div className={viewMode === "2" ? "selected-box" : ""}>
                       <span>Sem 2</span>
                       <strong>{row.cut2} pts</strong>
                     </div>
 
-                    <div>
+                    <div className={viewMode === "3" ? "selected-box" : ""}>
                       <span>Sem 3</span>
                       <strong>{row.cut3} pts</strong>
                     </div>
@@ -194,7 +269,7 @@ export default function LeaderboardPage() {
           align-items: center;
           gap: 20px;
           flex-wrap: wrap;
-          margin-bottom: 30px;
+          margin-bottom: 24px;
         }
 
         .eyebrow {
@@ -242,7 +317,39 @@ export default function LeaderboardPage() {
           color: white;
         }
 
-        .loading-card {
+        .weekly-filter {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 10px;
+          margin-bottom: 16px;
+        }
+
+        .weekly-filter button {
+          border: 1px solid rgba(255, 255, 255, 0.14);
+          background: rgba(255, 255, 255, 0.08);
+          color: white;
+          padding: 12px 18px;
+          border-radius: 999px;
+          font-weight: 900;
+          cursor: pointer;
+        }
+
+        .weekly-filter button.active {
+          background: linear-gradient(135deg, gold, #ffea70);
+          color: black;
+          border-color: gold;
+        }
+
+        .view-label {
+          margin-bottom: 24px;
+          color: lightgray;
+          font-weight: 800;
+        }
+
+        .view-label strong {
+          color: gold;
+        }
+                  .loading-card {
           padding: 50px;
           border-radius: 24px;
           background: rgba(0, 0, 0, 0.78);
@@ -330,6 +437,11 @@ export default function LeaderboardPage() {
           border-bottom: 1px solid rgba(255, 255, 255, 0.08);
         }
 
+        .selected-week {
+          color: gold;
+          font-weight: 900;
+        }
+
         .total-cell {
           color: limegreen;
           font-weight: 900;
@@ -367,6 +479,11 @@ export default function LeaderboardPage() {
           .btn {
             text-align: center;
             padding: 13px 10px;
+          }
+
+          .weekly-filter {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
           }
 
           .podium-grid {
@@ -452,6 +569,11 @@ export default function LeaderboardPage() {
             background: rgba(255, 255, 255, 0.06);
           }
 
+          .mobile-stats div.selected-box {
+            border: 1px solid gold;
+            background: rgba(255, 215, 0, 0.12);
+          }
+
           .mobile-stats span {
             display: block;
             color: rgba(255, 255, 255, 0.64);
@@ -466,4 +588,12 @@ export default function LeaderboardPage() {
       `}</style>
     </main>
   );
+}
+
+function getVisiblePoints(row: SummaryRow, viewMode: ViewMode) {
+  if (viewMode === "1") return row.cut1;
+  if (viewMode === "2") return row.cut2;
+  if (viewMode === "3") return row.cut3;
+
+  return row.total;
 }
