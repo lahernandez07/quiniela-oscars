@@ -175,8 +175,8 @@
     "awayFlag": "tn",
     "date": "2026-06-14",
     "time": "20:00",
-    "stadium": "Mexico City Stadium",
-    "city": "Ciudad de México",
+    "stadium": "Monterrey Stadium",
+    "city": "Monterrey",
     "cut": "1"
   },
   {
@@ -190,8 +190,8 @@
     "awayFlag": "cv",
     "date": "2026-06-15",
     "time": "10:00",
-    "stadium": "Kansas City Stadium",
-    "city": "Kansas City",
+    "stadium": "Atlanta Stadium",
+    "city": "Atlanta",
     "cut": "1"
   },
   {
@@ -235,8 +235,8 @@
     "awayFlag": "nz",
     "date": "2026-06-15",
     "time": "19:00",
-    "stadium": "New York New Jersey Stadium",
-    "city": "Nueva York / Nueva Jersey",
+    "stadium": "Los Angeles Stadium",
+    "city": "Los Ángeles",
     "cut": "1"
   },
   {
@@ -250,8 +250,8 @@
     "awayFlag": "sn",
     "date": "2026-06-16",
     "time": "13:00",
-    "stadium": "Philadelphia Stadium",
-    "city": "Philadelphia",
+    "stadium": "New York New Jersey Stadium",
+    "city": "Nueva York / Nueva Jersey",
     "cut": "1"
   },
   {
@@ -265,8 +265,8 @@
     "awayFlag": "no",
     "date": "2026-06-16",
     "time": "16:00",
-    "stadium": "Toronto Stadium",
-    "city": "Toronto",
+    "stadium": "Boston Stadium",
+    "city": "Boston",
     "cut": "1"
   },
   {
@@ -280,8 +280,8 @@
     "awayFlag": "dz",
     "date": "2026-06-16",
     "time": "19:00",
-    "stadium": "Los Angeles Stadium",
-    "city": "Los Ángeles",
+    "stadium": "Kansas City Stadium",
+    "city": "Kansas City",
     "cut": "1"
   },
   {
@@ -340,8 +340,8 @@
     "awayFlag": "pa",
     "date": "2026-06-17",
     "time": "17:00",
-    "stadium": "Boston Stadium",
-    "city": "Boston",
+    "stadium": "Toronto Stadium",
+    "city": "Toronto",
     "cut": "1"
   },
   {
@@ -358,8 +358,8 @@
     "stadium": "Mexico City Stadium",
     "city": "Ciudad de México",
     "cut": "1"
-   },
-     {
+  },
+  {
     "id": 25,
     "matchNumber": 25,
     "stage": "group",
@@ -370,8 +370,8 @@
     "awayFlag": "za",
     "date": "2026-06-18",
     "time": "10:00",
-    "stadium": "Atlanta Stadium",
-    "city": "Atlanta",
+    "stadium": "Guadalajara Stadium",
+    "city": "Guadalajara",
     "cut": "2"
   },
   {
@@ -565,8 +565,8 @@
     "awayFlag": "ir",
     "date": "2026-06-21",
     "time": "13:00",
-    "stadium": "Los Angeles Stadium",
-    "city": "Los Ángeles",
+    "stadium": "Atlanta Stadium",
+    "city": "Atlanta",
     "cut": "2"
   },
   {
@@ -719,7 +719,7 @@
     "city": "Guadalajara",
     "cut": "2"
   },
-    {
+  {
     "id": 49,
     "matchNumber": 49,
     "stage": "group",
@@ -730,8 +730,8 @@
     "awayFlag": "ca",
     "date": "2026-06-24",
     "time": "13:00",
-    "stadium": "San Francisco Bay Area Stadium",
-    "city": "San Francisco Bay Area",
+    "stadium": "BC Place Vancouver",
+    "city": "Vancouver",
     "cut": "3"
   },
   {
@@ -805,8 +805,8 @@
     "awayFlag": "kr",
     "date": "2026-06-24",
     "time": "19:00",
-    "stadium": "Guadalajara Stadium",
-    "city": "Guadalajara",
+    "stadium": "Monterrey Stadium",
+    "city": "Monterrey",
     "cut": "3"
   },
   {
@@ -820,8 +820,8 @@
     "awayFlag": "de",
     "date": "2026-06-25",
     "time": "14:00",
-    "stadium": "Dallas Stadium",
-    "city": "Dallas",
+    "stadium": "New York New Jersey Stadium",
+    "city": "Nueva York / Nueva Jersey",
     "cut": "3"
   },
   {
@@ -835,8 +835,8 @@
     "awayFlag": "ci",
     "date": "2026-06-25",
     "time": "14:00",
-    "stadium": "Houston Stadium",
-    "city": "Houston",
+    "stadium": "Philadelphia Stadium",
+    "city": "Philadelphia",
     "cut": "3"
   },
   {
@@ -865,8 +865,8 @@
     "awayFlag": "se",
     "date": "2026-06-25",
     "time": "17:00",
-    "stadium": "Monterrey Stadium",
-    "city": "Monterrey",
+    "stadium": "Dallas Stadium",
+    "city": "Dallas",
     "cut": "3"
   },
   {
@@ -895,8 +895,8 @@
     "awayFlag": "au",
     "date": "2026-06-25",
     "time": "20:00",
-    "stadium": "BC Place Vancouver",
-    "city": "Vancouver",
+    "stadium": "San Francisco Bay Area Stadium",
+    "city": "San Francisco Bay Area",
     "cut": "3"
   },
   {
@@ -910,8 +910,8 @@
     "awayFlag": "fr",
     "date": "2026-06-26",
     "time": "13:00",
-    "stadium": "New York New Jersey Stadium",
-    "city": "Nueva York / Nueva Jersey",
+    "stadium": "Boston Stadium",
+    "city": "Boston",
     "cut": "3"
   },
   {
@@ -925,8 +925,8 @@
     "awayFlag": "iq",
     "date": "2026-06-26",
     "time": "13:00",
-    "stadium": "Philadelphia Stadium",
-    "city": "Philadelphia",
+    "stadium": "Toronto Stadium",
+    "city": "Toronto",
     "cut": "3"
   },
   {
@@ -940,8 +940,8 @@
     "awayFlag": "es",
     "date": "2026-06-26",
     "time": "18:00",
-    "stadium": "Toronto Stadium",
-    "city": "Toronto",
+    "stadium": "Guadalajara Stadium",
+    "city": "Guadalajara",
     "cut": "3"
   },
   {
@@ -955,8 +955,8 @@
     "awayFlag": "sa",
     "date": "2026-06-26",
     "time": "18:00",
-    "stadium": "Boston Stadium",
-    "city": "Boston",
+    "stadium": "Houston Stadium",
+    "city": "Houston",
     "cut": "3"
   },
   {
@@ -970,8 +970,8 @@
     "awayFlag": "be",
     "date": "2026-06-26",
     "time": "21:00",
-    "stadium": "Seattle Stadium",
-    "city": "Seattle",
+    "stadium": "BC Place Vancouver",
+    "city": "Vancouver",
     "cut": "3"
   },
   {
@@ -985,8 +985,8 @@
     "awayFlag": "ir",
     "date": "2026-06-26",
     "time": "21:00",
-    "stadium": "San Francisco Bay Area Stadium",
-    "city": "San Francisco Bay Area",
+    "stadium": "Seattle Stadium",
+    "city": "Seattle",
     "cut": "3"
   },
   {
@@ -1045,8 +1045,8 @@
     "awayFlag": "uz",
     "date": "2026-06-27",
     "time": "17:30",
-    "stadium": "Kansas City Stadium",
-    "city": "Kansas City",
+    "stadium": "Atlanta Stadium",
+    "city": "Atlanta",
     "cut": "3"
   },
   {
@@ -1075,8 +1075,8 @@
     "awayFlag": "at",
     "date": "2026-06-27",
     "time": "20:00",
-    "stadium": "Atlanta Stadium",
-    "city": "Atlanta",
+    "stadium": "Kansas City Stadium",
+    "city": "Kansas City",
     "cut": "3"
   }
 ]
