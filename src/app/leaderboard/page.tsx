@@ -14,6 +14,7 @@ type SummaryRow = {
 };
 
 type ViewMode = "general" | "1" | "2" | "3";
+type SortMode = "selected" | "total";
 
 export default function LeaderboardPage() {
   const [rows, setRows] = useState<SummaryRow[]>([]);
@@ -21,6 +22,7 @@ export default function LeaderboardPage() {
   const [error, setError] = useState(false);
 
   const [viewMode, setViewMode] = useState<ViewMode>("general");
+  const [sortMode, setSortMode] = useState<SortMode>("selected");
 
   useEffect(() => {
     async function loadLeaderboard() {
@@ -51,21 +53,36 @@ export default function LeaderboardPage() {
     loadLeaderboard();
   }, []);
 
-  const sortedRows = useMemo(() => {
-    return [...rows].sort((a, b) => {
-      const pointsA = getVisiblePoints(a, viewMode);
-      const pointsB = getVisiblePoints(b, viewMode);
-
-      if (pointsB !== pointsA) {
-        return pointsB - pointsA;
-      }
-
-      return b.exact_scores - a.exact_scores;
-    });
-  }, [rows, viewMode]);
+  function changeViewMode(mode: ViewMode) {
+    setViewMode(mode);
+    setSortMode("selected");
+  }
 
   const titleLabel =
     viewMode === "general" ? "Acumulado" : `Semana ${viewMode}`;
+
+  const selectedColumnLabel =
+    viewMode === "general" ? "Acumulado" : `Semana ${viewMode}`;
+
+  const sortedRows = useMemo(() => {
+    return [...rows].sort((a, b) => {
+      const primaryA =
+        sortMode === "total" ? a.total : getVisiblePoints(a, viewMode);
+
+      const primaryB =
+        sortMode === "total" ? b.total : getVisiblePoints(b, viewMode);
+
+      if (primaryB !== primaryA) {
+        return primaryB - primaryA;
+      }
+
+      if (b.exact_scores !== a.exact_scores) {
+        return b.exact_scores - a.exact_scores;
+      }
+
+      return a.display_name.localeCompare(b.display_name);
+    });
+  }, [rows, viewMode, sortMode]);
 
   return (
     <main className="leaderboard-page">
@@ -77,8 +94,7 @@ export default function LeaderboardPage() {
             <h1>Leaderboard Mundial 2026</h1>
 
             <p>
-              Consulta el rendimiento acumulado o el ranking específico por
-              semana.
+              Consulta el ranking acumulado o el ranking específico por semana.
             </p>
           </div>
 
@@ -103,7 +119,7 @@ export default function LeaderboardPage() {
             <button
               key={item.value}
               type="button"
-              onClick={() => setViewMode(item.value as ViewMode)}
+              onClick={() => changeViewMode(item.value as ViewMode)}
               className={viewMode === item.value ? "active" : ""}
             >
               {item.label}
@@ -112,15 +128,16 @@ export default function LeaderboardPage() {
         </section>
 
         <div className="view-label">
-          Mostrando ranking: <strong>{titleLabel}</strong>
+          Mostrando ranking: <strong>{titleLabel}</strong> · Ordenado por{" "}
+          <strong>
+            {sortMode === "total" ? "Acumulado" : selectedColumnLabel}
+          </strong>
         </div>
 
         {loading ? (
           <div className="loading-card">Cargando leaderboard...</div>
         ) : error ? (
-          <div className="loading-card">
-            No se pudo cargar el leaderboard.
-          </div>
+          <div className="loading-card">No se pudo cargar el leaderboard.</div>
         ) : sortedRows.length === 0 ? (
           <div className="loading-card">
             Todavía no hay resultados registrados.
@@ -138,13 +155,15 @@ export default function LeaderboardPage() {
                   <h2>{row.display_name}</h2>
 
                   <div className="big-score">
-                    {getVisiblePoints(row, viewMode)}
+                    {sortMode === "total"
+                      ? row.total
+                      : getVisiblePoints(row, viewMode)}
                   </div>
 
                   <div className="exactos">
-                    {viewMode === "general"
-                      ? `Marcadores exactos: ${row.exact_scores}`
-                      : `${titleLabel}: ${getVisiblePoints(
+                    {sortMode === "total"
+                      ? `Acumulado: ${row.total} pts`
+                      : `${selectedColumnLabel}: ${getVisiblePoints(
                           row,
                           viewMode
                         )} pts`}
@@ -157,11 +176,33 @@ export default function LeaderboardPage() {
                 <thead>
                   <tr>
                     <th>#</th>
+
                     <th>Participante</th>
-                    <th>Sem 1</th>
-                    <th>Sem 2</th>
-                    <th>Sem 3</th>
-                    <th>{viewMode === "general" ? "Total" : titleLabel}</th>
+
+                    <th>
+                      <button
+                        type="button"
+                        className="sort-header"
+                        onClick={() => setSortMode("selected")}
+                      >
+                        {selectedColumnLabel}
+                        {sortMode === "selected" ? " ↓" : ""}
+                      </button>
+                    </th>
+
+                    {viewMode !== "general" && (
+                      <th>
+                        <button
+                          type="button"
+                          className="sort-header"
+                          onClick={() => setSortMode("total")}
+                        >
+                          Acumulado
+                          {sortMode === "total" ? " ↓" : ""}
+                        </button>
+                      </th>
+                    )}
+
                     <th>Marcadores exactos</th>
                   </tr>
                 </thead>
@@ -177,21 +218,13 @@ export default function LeaderboardPage() {
                         <strong>{row.display_name}</strong>
                       </td>
 
-                      <td className={viewMode === "1" ? "selected-week" : ""}>
-                        {row.cut1} pts
-                      </td>
-
-                      <td className={viewMode === "2" ? "selected-week" : ""}>
-                        {row.cut2} pts
-                      </td>
-
-                      <td className={viewMode === "3" ? "selected-week" : ""}>
-                        {row.cut3} pts
-                      </td>
-
-                      <td className="total-cell">
+                      <td className="selected-week">
                         {getVisiblePoints(row, viewMode)} pts
                       </td>
+
+                      {viewMode !== "general" && (
+                        <td className="total-cell">{row.total} pts</td>
+                      )}
 
                       <td>{row.exact_scores}</td>
                     </tr>
@@ -210,27 +243,53 @@ export default function LeaderboardPage() {
 
                     <div className="mobile-total">
                       <span>
-                        {viewMode === "general" ? "Total" : `Sem ${viewMode}`}
+                        {sortMode === "total"
+                          ? "Total"
+                          : viewMode === "general"
+                            ? "Total"
+                            : `Sem ${viewMode}`}
                       </span>
-                      <strong>{getVisiblePoints(row, viewMode)}</strong>
+
+                      <strong>
+                        {sortMode === "total"
+                          ? row.total
+                          : getVisiblePoints(row, viewMode)}
+                      </strong>
                     </div>
                   </div>
 
+                  <div className="mobile-sort-buttons">
+                    <button
+                      type="button"
+                      className={sortMode === "selected" ? "active" : ""}
+                      onClick={() => setSortMode("selected")}
+                    >
+                      Ordenar por {selectedColumnLabel}
+                    </button>
+
+                    {viewMode !== "general" && (
+                      <button
+                        type="button"
+                        className={sortMode === "total" ? "active" : ""}
+                        onClick={() => setSortMode("total")}
+                      >
+                        Ordenar por acumulado
+                      </button>
+                    )}
+                  </div>
+
                   <div className="mobile-stats">
-                    <div className={viewMode === "1" ? "selected-box" : ""}>
-                      <span>Sem 1</span>
-                      <strong>{row.cut1} pts</strong>
+                    <div className="selected-box">
+                      <span>{selectedColumnLabel}</span>
+                      <strong>{getVisiblePoints(row, viewMode)} pts</strong>
                     </div>
 
-                    <div className={viewMode === "2" ? "selected-box" : ""}>
-                      <span>Sem 2</span>
-                      <strong>{row.cut2} pts</strong>
-                    </div>
-
-                    <div className={viewMode === "3" ? "selected-box" : ""}>
-                      <span>Sem 3</span>
-                      <strong>{row.cut3} pts</strong>
-                    </div>
+                    {viewMode !== "general" && (
+                      <div>
+                        <span>Acumulado</span>
+                        <strong>{row.total} pts</strong>
+                      </div>
+                    )}
 
                     <div>
                       <span>Marcadores exactos</span>
@@ -437,9 +496,22 @@ export default function LeaderboardPage() {
           border-bottom: 1px solid rgba(255, 255, 255, 0.08);
         }
 
+        .sort-header {
+          appearance: none;
+          border: none;
+          background: transparent;
+          color: black;
+          font: inherit;
+          font-weight: 1000;
+          cursor: pointer;
+          padding: 0;
+          text-align: left;
+        }
+
         .selected-week {
           color: gold;
           font-weight: 900;
+          font-size: 22px;
         }
 
         .total-cell {
@@ -555,6 +627,26 @@ export default function LeaderboardPage() {
 
           .mobile-total strong {
             font-size: 24px;
+          }
+
+          .mobile-sort-buttons {
+            display: grid;
+            gap: 8px;
+            margin-bottom: 14px;
+          }
+
+          .mobile-sort-buttons button {
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            border-radius: 999px;
+            padding: 10px 12px;
+            background: rgba(255, 255, 255, 0.08);
+            color: white;
+            font-weight: 900;
+          }
+
+          .mobile-sort-buttons button.active {
+            background: gold;
+            color: black;
           }
 
           .mobile-stats {

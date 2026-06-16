@@ -19,9 +19,11 @@ type Match = {
   cut: string;
 };
 
+type CutFilter = "Todos" | "Hoy" | "1" | "2" | "3";
+
 export default function CalendarioPage() {
   const [matches, setMatches] = useState<Match[]>([]);
-  const [selectedCut, setSelectedCut] = useState("Todos");
+  const [selectedCut, setSelectedCut] = useState<CutFilter>("Todos");
   const [selectedGroup, setSelectedGroup] = useState("Todos");
   const [selectedDate, setSelectedDate] = useState("Todos");
   const [search, setSearch] = useState("");
@@ -37,6 +39,8 @@ export default function CalendarioPage() {
     loadMatches();
   }, []);
 
+  const today = getTodayMexicoCity();
+
   const groups = useMemo(() => {
     return ["Todos", ...Array.from(new Set(matches.map((m) => m.group)))];
   }, [matches]);
@@ -48,7 +52,9 @@ export default function CalendarioPage() {
   const filteredMatches = useMemo(() => {
     return matches.filter((match) => {
       const cutOk =
-        selectedCut === "Todos" || getCutByDate(match.date) === selectedCut;
+        selectedCut === "Todos" ||
+        (selectedCut === "Hoy" && match.date === today) ||
+        getCutByDate(match.date) === selectedCut;
 
       const groupOk =
         selectedGroup === "Todos" || match.group === selectedGroup;
@@ -64,7 +70,7 @@ export default function CalendarioPage() {
 
       return cutOk && groupOk && dateOk && searchOk;
     });
-  }, [matches, selectedCut, selectedGroup, selectedDate, search]);
+  }, [matches, selectedCut, selectedGroup, selectedDate, search, today]);
 
   const groupedByDate = useMemo(() => {
     const result: Record<string, Match[]> = {};
@@ -107,18 +113,23 @@ export default function CalendarioPage() {
         </header>
 
         <section className="cuts">
-          {["Todos", "1", "2", "3"].map((cut) => (
+          {[
+            { value: "Todos", label: "Todos" },
+            { value: "Hoy", label: "Hoy" },
+            { value: "1", label: "Semana 1" },
+            { value: "2", label: "Semana 2" },
+            { value: "3", label: "Semana 3" },
+          ].map((cut) => (
             <button
-              key={cut}
-              onClick={() => setSelectedCut(cut)}
-              className={selectedCut === cut ? "cut active" : "cut"}
+              key={cut.value}
+              onClick={() => setSelectedCut(cut.value as CutFilter)}
+              className={selectedCut === cut.value ? "cut active" : "cut"}
             >
-              {cut === "Todos" ? "Todos" : `Semana ${cut}`}
+              {cut.label}
             </button>
           ))}
         </section>
-
-        <section className="filters">
+                <section className="filters">
           <select
             value={selectedGroup}
             onChange={(e) => setSelectedGroup(e.target.value)}
@@ -146,8 +157,12 @@ export default function CalendarioPage() {
           />
         </section>
 
-        <div className="counter">{filteredMatches.length} partidos</div>
-                {Object.entries(groupedByDate).map(([date, dayMatches]) => (
+        <div className="counter">
+          {filteredMatches.length} partidos
+          {selectedCut === "Hoy" ? ` · Hoy CDMX: ${formatDate(today)}` : ""}
+        </div>
+
+        {Object.entries(groupedByDate).map(([date, dayMatches]) => (
           <section key={date} className="dateBlock">
             <h2>{formatDate(date)}</h2>
 
@@ -184,6 +199,12 @@ export default function CalendarioPage() {
             </div>
           </section>
         ))}
+
+        {filteredMatches.length === 0 && (
+          <div className="emptyCard">
+            No hay partidos para los filtros seleccionados.
+          </div>
+        )}
       </div>
 
       <style jsx>{`
@@ -252,8 +273,7 @@ export default function CalendarioPage() {
           border: 1px solid rgba(255, 255, 255, 0.15);
           background: rgba(255, 255, 255, 0.05);
         }
-
-        .cuts {
+                  .cuts {
           display: flex;
           gap: 10px;
           flex-wrap: wrap;
@@ -318,7 +338,8 @@ export default function CalendarioPage() {
           grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
           gap: 16px;
         }
-                  .card {
+
+        .card {
           border-radius: 24px;
           padding: 20px;
           background: rgba(0, 0, 0, 0.78);
@@ -377,6 +398,16 @@ export default function CalendarioPage() {
           line-height: 1.6;
         }
 
+        .emptyCard {
+          border-radius: 24px;
+          padding: 28px;
+          text-align: center;
+          background: rgba(0, 0, 0, 0.78);
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          color: lightgray;
+          font-weight: 900;
+        }
+
         @media (max-width: 768px) {
           .page {
             padding: 28px 12px;
@@ -403,6 +434,15 @@ export default function CalendarioPage() {
       `}</style>
     </main>
   );
+}
+
+function getTodayMexicoCity() {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Mexico_City",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
 }
 
 function getCutByDate(date: string) {
