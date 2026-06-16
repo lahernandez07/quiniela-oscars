@@ -30,10 +30,12 @@ type MatchPrediction = {
   predictions: Prediction[];
 };
 
+type CutFilter = "Todos" | "Hoy" | "1" | "2" | "3";
+
 export default function PronosticosPage() {
   const [matches, setMatches] = useState<MatchPrediction[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedCut, setSelectedCut] = useState("Todos");
+  const [selectedCut, setSelectedCut] = useState<CutFilter>("Todos");
   const [selectedGroup, setSelectedGroup] = useState("Todos");
   const [selectedDate, setSelectedDate] = useState("Todos");
   const [search, setSearch] = useState("");
@@ -41,7 +43,10 @@ export default function PronosticosPage() {
   useEffect(() => {
     async function loadPredictions() {
       try {
-        const res = await fetch("/api/match-predictions");
+        const res = await fetch("/api/match-predictions", {
+          cache: "no-store",
+        });
+
         const data = await res.json();
 
         if (Array.isArray(data)) {
@@ -61,6 +66,8 @@ export default function PronosticosPage() {
     loadPredictions();
   }, []);
 
+  const today = getTodayMexicoCity();
+
   const groups = useMemo(() => {
     return ["Todos", ...Array.from(new Set(matches.map((m) => m.group)))];
   }, [matches]);
@@ -69,16 +76,12 @@ export default function PronosticosPage() {
     return ["Todos", ...Array.from(new Set(matches.map((m) => m.date)))];
   }, [matches]);
 
-  function getCut(matchNumber: number) {
-    if (matchNumber <= 12) return "1";
-    if (matchNumber <= 24) return "2";
-    return "3";
-  }
-
   const filteredMatches = useMemo(() => {
     return matches.filter((match) => {
       const cutOk =
-        selectedCut === "Todos" || getCut(match.match_number) === selectedCut;
+        selectedCut === "Todos" ||
+        (selectedCut === "Hoy" && match.date === today) ||
+        getCutByDate(match.date) === selectedCut;
 
       const groupOk =
         selectedGroup === "Todos" || match.group === selectedGroup;
@@ -86,17 +89,19 @@ export default function PronosticosPage() {
       const dateOk =
         selectedDate === "Todos" || match.date === selectedDate;
 
-      const text = `${match.match_number} ${match.home_team} ${match.away_team} ${match.city} ${match.stadium} ${match.group}`.toLowerCase();
+      const text =
+        `${match.match_number} ${match.home_team} ${match.away_team} ${match.city} ${match.stadium} ${match.group}`.toLowerCase();
 
       const searchOk =
         search.trim() === "" || text.includes(search.toLowerCase());
 
       return cutOk && groupOk && dateOk && searchOk;
     });
-  }, [matches, selectedCut, selectedGroup, selectedDate, search]);
+  }, [matches, selectedCut, selectedGroup, selectedDate, search, today]);
 
   function scrollToMatch(matchId: number) {
     const element = document.getElementById(`match-${matchId}`);
+
     if (element) {
       element.scrollIntoView({ behavior: "smooth", block: "start" });
     }
@@ -123,25 +128,31 @@ export default function PronosticosPage() {
             partido ya inició.
           </p>
         </div>
-                <section className="mb-8 rounded-3xl border border-zinc-800 bg-black/90 p-4 shadow-2xl backdrop-blur">
+
+        <section className="mb-8 rounded-3xl border border-zinc-800 bg-black/90 p-4 shadow-2xl backdrop-blur">
           <div className="mb-4 flex flex-wrap gap-2">
-            {["Todos", "1", "2", "3"].map((cut) => (
+            {[
+              { value: "Todos", label: "Todas" },
+              { value: "Hoy", label: "Hoy" },
+              { value: "1", label: "Semana 1" },
+              { value: "2", label: "Semana 2" },
+              { value: "3", label: "Semana 3" },
+            ].map((cut) => (
               <button
-                key={cut}
+                key={cut.value}
                 type="button"
-                onClick={() => setSelectedCut(cut)}
+                onClick={() => setSelectedCut(cut.value as CutFilter)}
                 className={
-                  selectedCut === cut
+                  selectedCut === cut.value
                     ? "rounded-full bg-yellow-400 px-4 py-2 text-sm font-black text-black shadow-lg shadow-yellow-400/20"
                     : "rounded-full border border-zinc-700 bg-zinc-900 px-4 py-2 text-sm font-black text-white"
                 }
               >
-                {cut === "Todos" ? "Todas" : `Semana ${cut}`}
+                {cut.label}
               </button>
             ))}
           </div>
-
-          <div className="grid gap-3 md:grid-cols-[220px_260px_1fr]">
+                    <div className="grid gap-3 md:grid-cols-[220px_260px_1fr]">
             <select
               value={selectedGroup}
               onChange={(e) => setSelectedGroup(e.target.value)}
@@ -186,6 +197,7 @@ export default function PronosticosPage() {
 
           <div className="mt-3 text-sm font-bold text-zinc-400">
             {filteredMatches.length} partidos visibles
+            {selectedCut === "Hoy" ? ` · Hoy CDMX: ${formatDate(today)}` : ""}
           </div>
         </section>
 
@@ -262,6 +274,7 @@ export default function PronosticosPage() {
                           <p className="text-xs font-black uppercase tracking-widest text-zinc-500">
                             Participante
                           </p>
+
                           <p className="mt-1 text-xl font-black text-white">
                             {prediction.display_name}
                           </p>
@@ -272,6 +285,7 @@ export default function PronosticosPage() {
                             <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500">
                               Pronóstico
                             </p>
+
                             <p className="mt-1 text-xl font-black">
                               {prediction.home_score} -{" "}
                               {prediction.away_score}
@@ -282,6 +296,7 @@ export default function PronosticosPage() {
                             <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500">
                               Puntos
                             </p>
+
                             <p
                               className={`mt-1 text-2xl font-black ${pointsColor(
                                 prediction.points
@@ -295,6 +310,7 @@ export default function PronosticosPage() {
                             <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500">
                               Exacto
                             </p>
+
                             <p className="mt-1 text-2xl font-black">
                               {prediction.exact === 1 ? "🎯" : "—"}
                             </p>
@@ -311,10 +327,13 @@ export default function PronosticosPage() {
                           <th className="px-6 py-4 text-left">
                             Participante
                           </th>
+
                           <th className="px-6 py-4 text-center">
                             Pronóstico
                           </th>
+
                           <th className="px-6 py-4 text-center">Puntos</th>
+
                           <th className="px-6 py-4 text-center">Exacto</th>
                         </tr>
                       </thead>
@@ -368,6 +387,21 @@ export default function PronosticosPage() {
       </div>
     </main>
   );
+}
+
+function getTodayMexicoCity() {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Mexico_City",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}
+
+function getCutByDate(date: string) {
+  if (date >= "2026-06-11" && date <= "2026-06-14") return "1";
+  if (date >= "2026-06-15" && date <= "2026-06-21") return "2";
+  return "3";
 }
 
 function pointsColor(points: number | null) {
