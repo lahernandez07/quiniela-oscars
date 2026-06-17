@@ -78,12 +78,12 @@ export default function AppHeader() {
           className="flex min-w-0 items-center gap-3 text-white no-underline"
         >
           <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-lime-400 text-xl font-black text-black">
-            📐
+            🐾
           </div>
 
           <div className="min-w-0">
             <div className="truncate text-base font-black md:text-lg">
-              GAYOU
+            Panteras del ICC
             </div>
 
             <div className="truncate text-[10px] font-extrabold tracking-widest text-zinc-400 md:text-xs">
