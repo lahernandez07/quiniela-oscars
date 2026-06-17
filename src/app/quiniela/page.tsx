@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import type { CSSProperties } from "react";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
+import TeamFlag from "@/components/TeamFlag";
 
 type Match = {
   id: number;
@@ -175,19 +176,18 @@ export default function QuinielaPage() {
     if (!user) {
       return;
     }
-        const { error } = await supabase
-      .from("predictions_dev")
-      .upsert(
-        {
-          user_id: user.id,
-          match_id: matchId,
-          home_score: Number(prediction.homeScore),
-          away_score: Number(prediction.awayScore),
-        },
-        {
-          onConflict: "user_id,match_id",
-        }
-      );
+
+    const { error } = await supabase.from("predictions_dev").upsert(
+      {
+        user_id: user.id,
+        match_id: matchId,
+        home_score: Number(prediction.homeScore),
+        away_score: Number(prediction.awayScore),
+      },
+      {
+        onConflict: "user_id,match_id",
+      }
+    );
 
     if (error) {
       console.error(error);
@@ -269,9 +269,7 @@ export default function QuinielaPage() {
           ))}
         </div>
 
-        <p style={{ fontSize: 22 }}>
-          {cuts[activeCut].description}
-        </p>
+        <p style={{ fontSize: 22 }}>{cuts[activeCut].description}</p>
 
         <p
           style={{
@@ -280,8 +278,7 @@ export default function QuinielaPage() {
             marginTop: 20,
           }}
         >
-          Pronósticos capturados: {completedInFilter}/
-          {filteredMatches.length}
+          Pronósticos capturados: {completedInFilter}/{filteredMatches.length}
         </p>
       </section>
 
@@ -328,7 +325,8 @@ export default function QuinielaPage() {
                 {locked ? "BLOQUEADO" : "DISPONIBLE"}
               </span>
             </div>
-                        <div
+
+            <div
               style={{
                 display: "grid",
                 gridTemplateColumns: "1fr",
@@ -339,7 +337,6 @@ export default function QuinielaPage() {
             >
               <ScoreTeamRow
                 score={prediction?.homeScore ?? ""}
-                placeholder=""
                 flag={match.homeFlag}
                 team={match.home}
                 locked={locked}
@@ -361,7 +358,6 @@ export default function QuinielaPage() {
 
               <ScoreTeamRow
                 score={prediction?.awayScore ?? ""}
-                placeholder=""
                 flag={match.awayFlag}
                 team={match.away}
                 locked={locked}
@@ -388,9 +384,7 @@ export default function QuinielaPage() {
                 <p style={{ margin: "8px 0", opacity: 0.9 }}>
                   {match.date} · {match.time} · {match.city}
                 </p>
-                <p style={{ margin: 0, opacity: 0.7 }}>
-                  {match.stadium}
-                </p>
+                <p style={{ margin: 0, opacity: 0.7 }}>{match.stadium}</p>
               </div>
 
               <button
@@ -431,14 +425,12 @@ export default function QuinielaPage() {
 
 function ScoreTeamRow({
   score,
-  placeholder,
   flag,
   team,
   locked,
   onChange,
 }: {
   score: string;
-  placeholder: string;
   flag: string;
   team: string;
   locked: boolean;
@@ -462,9 +454,9 @@ function ScoreTeamRow({
         style={scoreInput}
       />
 
-      <img
-        src={`https://flagcdn.com/w80/${flag}.png`}
-        alt={team}
+      <TeamFlag
+        code={flag}
+        name={team}
         style={{
           width: 64,
           height: 48,

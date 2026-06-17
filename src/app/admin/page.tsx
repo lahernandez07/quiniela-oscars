@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 import { isAdmin as checkIsAdmin } from "@/lib/admin";
+import TeamFlag from "@/components/TeamFlag";
 
 type MatchResult = {
   match_id: number;
@@ -31,12 +32,7 @@ type ResultInput = {
   awayScore: string;
 };
 
-type FilterType =
-  | "pending"
-  | "captured"
-  | "today"
-  | "yesterday"
-  | "all";
+type FilterType = "pending" | "captured" | "today" | "yesterday" | "all";
 
 export default function AdminPage() {
   const supabase = supabaseBrowser();
@@ -133,7 +129,8 @@ export default function AdminPage() {
       },
     }));
   }
-    async function saveResult(matchId: number) {
+
+  async function saveResult(matchId: number) {
     const result = results[matchId];
 
     if (!result?.homeScore || !result?.awayScore) {
@@ -300,7 +297,8 @@ export default function AdminPage() {
       </main>
     );
   }
-    return (
+
+  return (
     <main style={pageStyle}>
       <section style={heroStyle}>
         <div>
@@ -339,9 +337,7 @@ export default function AdminPage() {
 
           <button
             onClick={() => setFilter("yesterday")}
-            style={
-              filter === "yesterday" ? activeFilterButton : filterButton
-            }
+            style={filter === "yesterday" ? activeFilterButton : filterButton}
           >
             Ayer · {counters.yesterday}
           </button>
@@ -452,8 +448,8 @@ export default function AdminPage() {
                   {savingMatchId === match.id
                     ? "Guardando..."
                     : savedMatchId === match.id
-                      ? "✓ Guardado"
-                      : "Guardar resultado"}
+                    ? "✓ Guardado"
+                    : "Guardar resultado"}
                 </button>
               </div>
             </div>
@@ -485,11 +481,7 @@ function AdminScoreRow({
         style={scoreInput}
       />
 
-      <img
-        src={`https://flagcdn.com/w80/${flag}.png`}
-        alt={team}
-        style={flagStyle}
-      />
+      <TeamFlag code={flag} name={team} style={flagStyle} />
 
       <span style={teamNameStyle}>{team}</span>
     </div>
@@ -508,6 +500,7 @@ function getMexicoCityDate(dayOffset: number) {
     day: "2-digit",
   }).format(baseDate);
 }
+
 const simplePage = {
   minHeight: "100vh",
   padding: 40,
