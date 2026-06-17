@@ -31,7 +31,12 @@ type ResultInput = {
   awayScore: string;
 };
 
-type FilterType = "pending" | "captured" | "today" | "all";
+type FilterType =
+  | "pending"
+  | "captured"
+  | "today"
+  | "yesterday"
+  | "all";
 
 export default function AdminPage() {
   const supabase = supabaseBrowser();
@@ -128,8 +133,7 @@ export default function AdminPage() {
       },
     }));
   }
-
-  async function saveResult(matchId: number) {
+    async function saveResult(matchId: number) {
     const result = results[matchId];
 
     if (!result?.homeScore || !result?.awayScore) {
@@ -211,12 +215,8 @@ export default function AdminPage() {
     return current?.homeScore !== "" && current?.awayScore !== "";
   }
 
-  const today = new Intl.DateTimeFormat("en-CA", {
-  timeZone: "America/Mexico_City",
-  year: "numeric",
-  month: "2-digit",
-  day: "2-digit",
-}).format(new Date());
+  const today = getMexicoCityDate(0);
+  const yesterday = getMexicoCityDate(-1);
 
   const groups = useMemo(() => {
     return Array.from(new Set(matches.map((match) => match.group))).sort();
@@ -226,14 +226,18 @@ export default function AdminPage() {
     const captured = matches.filter((match) => hasResult(match)).length;
     const pending = matches.length - captured;
     const todayMatches = matches.filter((match) => match.date === today).length;
+    const yesterdayMatches = matches.filter(
+      (match) => match.date === yesterday
+    ).length;
 
     return {
       all: matches.length,
       captured,
       pending,
       today: todayMatches,
+      yesterday: yesterdayMatches,
     };
-  }, [matches, results, today]);
+  }, [matches, results, today, yesterday]);
 
   const filteredMatches = useMemo(() => {
     return matches
@@ -254,6 +258,10 @@ export default function AdminPage() {
           return match.date === today;
         }
 
+        if (filter === "yesterday") {
+          return match.date === yesterday;
+        }
+
         return true;
       })
       .sort((a, b) => {
@@ -266,7 +274,7 @@ export default function AdminPage() {
 
         return a.matchNumber - b.matchNumber;
       });
-  }, [matches, results, filter, selectedGroup, today]);
+  }, [matches, results, filter, selectedGroup, today, yesterday]);
 
   if (checkingAuth) {
     return (
@@ -292,8 +300,7 @@ export default function AdminPage() {
       </main>
     );
   }
-
-  return (
+    return (
     <main style={pageStyle}>
       <section style={heroStyle}>
         <div>
@@ -328,6 +335,15 @@ export default function AdminPage() {
             style={filter === "today" ? activeFilterButton : filterButton}
           >
             Hoy · {counters.today}
+          </button>
+
+          <button
+            onClick={() => setFilter("yesterday")}
+            style={
+              filter === "yesterday" ? activeFilterButton : filterButton
+            }
+          >
+            Ayer · {counters.yesterday}
           </button>
 
           <button
@@ -480,6 +496,18 @@ function AdminScoreRow({
   );
 }
 
+function getMexicoCityDate(dayOffset: number) {
+  const baseDate = new Date();
+
+  baseDate.setDate(baseDate.getDate() + dayOffset);
+
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Mexico_City",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(baseDate);
+}
 const simplePage = {
   minHeight: "100vh",
   padding: 40,
