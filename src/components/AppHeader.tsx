@@ -5,8 +5,6 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 
-const SESSION_LIMIT = 60 * 60 * 1000;
-
 const ADMIN_EMAILS = [
   "la.hernandez07@gmail.com",
   "josetamezg@gmail.com",
@@ -51,22 +49,12 @@ export default function AppHeader() {
   useEffect(() => {
     if (!user) return;
 
-    const loginStartedAtKey = `session-started-at-${user.id}`;
-    let loginStartedAt = localStorage.getItem(loginStartedAtKey);
-
-    if (!loginStartedAt) {
-      loginStartedAt = String(Date.now());
-      localStorage.setItem(loginStartedAtKey, loginStartedAt);
-    }
-
-    const elapsed = Date.now() - Number(loginStartedAt);
-    const remaining = SESSION_LIMIT - elapsed;
-
     async function expireSession() {
-      localStorage.removeItem(loginStartedAtKey);
       await supabase.auth.signOut();
       window.location.href = "/";
     }
+
+    const remaining = getMillisecondsUntilEndOfDayMexicoCity();
 
     if (remaining <= 0) {
       expireSession();
@@ -79,15 +67,10 @@ export default function AppHeader() {
   }, [user]);
 
   async function handleLogout() {
-    if (user?.id) {
-      localStorage.removeItem(`session-started-at-${user.id}`);
-    }
-
     await supabase.auth.signOut();
     window.location.href = "/";
   }
-
-  return (
+    return (
     <header className="sticky top-0 z-50 border-b border-white/10 bg-black/95">
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 md:px-7 md:py-4">
         <Link
@@ -95,12 +78,12 @@ export default function AppHeader() {
           className="flex min-w-0 items-center gap-3 text-white no-underline"
         >
           <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-lime-400 text-xl font-black text-black">
-            🐾
+            📐
           </div>
 
           <div className="min-w-0">
             <div className="truncate text-base font-black md:text-lg">
-              Panteras del ICC
+              GAYOU
             </div>
 
             <div className="truncate text-[10px] font-extrabold tracking-widest text-zinc-400 md:text-xs">
@@ -153,6 +136,13 @@ export default function AppHeader() {
                 }
               >
                 Pronósticos
+              </Link>
+
+              <Link
+                href="/pagos"
+                className={isActive("/pagos") ? activeGoldButton : navButton}
+              >
+                Pagos
               </Link>
 
               <Link
@@ -245,6 +235,17 @@ export default function AppHeader() {
             </Link>
 
             <Link
+              href="/pagos"
+              className={
+                isActive("/pagos")
+                  ? mobileActiveGoldButton
+                  : mobileNavButton
+              }
+            >
+              Pagos
+            </Link>
+
+            <Link
               href="/participation"
               className={
                 isActive("/participation")
@@ -287,6 +288,26 @@ export default function AppHeader() {
       </nav>
     </header>
   );
+}
+function getMillisecondsUntilEndOfDayMexicoCity() {
+  const now = new Date();
+
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Mexico_City",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(now);
+
+  const year = Number(parts.find((part) => part.type === "year")?.value);
+  const month = Number(parts.find((part) => part.type === "month")?.value);
+  const day = Number(parts.find((part) => part.type === "day")?.value);
+
+  const mexicoEndOfDayAsUTC = new Date(
+    Date.UTC(year, month - 1, day + 1, 5, 59, 59, 999)
+  );
+
+  return mexicoEndOfDayAsUTC.getTime() - now.getTime();
 }
 
 const navButton =
