@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import type { CSSProperties } from "react";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
@@ -27,35 +26,48 @@ type Prediction = {
   awayScore: string;
 };
 
-type CutFilter = "all" | "cut1" | "cut2" | "cut3";
+type CutFilter = "all" | "today" | "cut1" | "cut2" | "cut3";
 
 const cuts = {
   all: {
     label: "Todos",
     description: "Todos los partidos disponibles",
   },
+  today: {
+    label: "Hoy",
+    description: "Partidos programados para hoy",
+  },
   cut1: {
     label: "Semana 1",
     description:
-      "Semana 1 · 11 al 14 junio · $1,500 1er lugar / $500 2do lugar - Pago lunes 15",
+      "Semana 1 · 11 al 14 junio · Pozo semanal $350",
     start: "2026-06-11",
     end: "2026-06-14",
   },
   cut2: {
     label: "Semana 2",
     description:
-      "Semana 2 - 15 al 21 de junio · $1,500 1er lugar / $500 2do lugar - Pago lunes 22",
+      "Semana 2 · 15 al 21 junio · Pozo semanal $350",
     start: "2026-06-15",
     end: "2026-06-21",
   },
   cut3: {
     label: "Semana 3",
     description:
-      "Semana 3 - 22 al 27 de junio · $1,500 1er lugar / $500 2do lugar - Pago lunes 29",
+      "Semana 3 · 22 al 27 junio · Pozo semanal $350",
     start: "2026-06-22",
     end: "2026-06-27",
   },
 };
+
+function getMexicoCityDate() {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Mexico_City",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}
 
 function isMatchLocked(match: Match) {
   const mexicoDate = new Date(`${match.date}T${match.time}:00-06:00`);
@@ -67,6 +79,10 @@ function isMatchLocked(match: Match) {
 function isMatchInCut(match: Match, cut: CutFilter) {
   if (cut === "all") return true;
 
+  if (cut === "today") {
+    return match.date === getMexicoCityDate();
+  }
+
   const selectedCut = cuts[cut];
 
   return match.date >= selectedCut.start && match.date <= selectedCut.end;
@@ -77,7 +93,7 @@ export default function QuinielaPage() {
 
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeCut, setActiveCut] = useState<CutFilter>("all");
+  const [activeCut, setActiveCut] = useState<CutFilter>("today");
 
   const [predictions, setPredictions] =
     useState<Record<number, Prediction>>({});
@@ -168,8 +184,7 @@ export default function QuinielaPage() {
     if (match && isMatchLocked(match)) {
       return;
     }
-
-    const {
+        const {
       data: { user },
     } = await supabase.auth.getUser();
 
@@ -282,143 +297,159 @@ export default function QuinielaPage() {
         </p>
       </section>
 
-      {filteredMatches.map((match) => {
-        const prediction = predictions[match.id];
-        const locked = isMatchLocked(match);
-        const saved = savedMatches[match.id];
+      {filteredMatches.length === 0 ? (
+        <section
+          style={{
+            border: "1px solid rgba(255,255,255,.12)",
+            borderRadius: 28,
+            padding: 24,
+            marginBottom: 28,
+          }}
+        >
+          <h2 style={{ marginTop: 0 }}>No hay partidos para hoy.</h2>
+          <p style={{ opacity: 0.8 }}>
+            Puedes cambiar a Semana 1, Semana 2, Semana 3 o Todos.
+          </p>
+        </section>
+      ) : (
+        filteredMatches.map((match) => {
+          const prediction = predictions[match.id];
+          const locked = isMatchLocked(match);
+          const saved = savedMatches[match.id];
 
-        return (
-          <div
-            key={match.id}
-            style={{
-              border: "1px solid rgba(255,255,255,.12)",
-              borderRadius: 28,
-              padding: 24,
-              marginBottom: 28,
-            }}
-          >
+          return (
             <div
+              key={match.id}
               style={{
-                display: "flex",
-                justifyContent: "space-between",
-                marginBottom: 24,
+                border: "1px solid rgba(255,255,255,.12)",
+                borderRadius: 28,
+                padding: 24,
+                marginBottom: 28,
               }}
             >
-              <span
+              <div
                 style={{
-                  background: "#7CFC00",
-                  color: "black",
-                  padding: "8px 14px",
-                  borderRadius: 999,
-                  fontWeight: 800,
+                  display: "flex",
+                  justifyContent: "space-between",
+                  marginBottom: 24,
                 }}
               >
-                {match.group}
-              </span>
+                <span
+                  style={{
+                    background: "#7CFC00",
+                    color: "black",
+                    padding: "8px 14px",
+                    borderRadius: 999,
+                    fontWeight: 800,
+                  }}
+                >
+                  {match.group}
+                </span>
 
-              <span
-                style={{
-                  color: locked ? "#ff5555" : "#00ff66",
-                  fontWeight: 800,
-                }}
-              >
-                {locked ? "BLOQUEADO" : "DISPONIBLE"}
-              </span>
-            </div>
-
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr",
-                gap: 18,
-                maxWidth: 560,
-                margin: "0 auto",
-              }}
-            >
-              <ScoreTeamRow
-                score={prediction?.homeScore ?? ""}
-                flag={match.homeFlag}
-                team={match.home}
-                locked={locked}
-                onChange={(value) =>
-                  updatePrediction(match.id, "homeScore", value)
-                }
-              />
+                <span
+                  style={{
+                    color: locked ? "#ff5555" : "#00ff66",
+                    fontWeight: 800,
+                  }}
+                >
+                  {locked ? "BLOQUEADO" : "DISPONIBLE"}
+                </span>
+              </div>
 
               <div
                 style={{
-                  textAlign: "center",
-                  fontSize: 20,
-                  fontWeight: 900,
-                  color: "#FFCC00",
+                  display: "grid",
+                  gridTemplateColumns: "1fr",
+                  gap: 18,
+                  maxWidth: 560,
+                  margin: "0 auto",
                 }}
               >
-                VS
+                <ScoreTeamRow
+                  score={prediction?.homeScore ?? ""}
+                  flag={match.homeFlag}
+                  team={match.home}
+                  locked={locked}
+                  onChange={(value) =>
+                    updatePrediction(match.id, "homeScore", value)
+                  }
+                />
+
+                <div
+                  style={{
+                    textAlign: "center",
+                    fontSize: 20,
+                    fontWeight: 900,
+                    color: "#FFCC00",
+                  }}
+                >
+                  VS
+                </div>
+
+                <ScoreTeamRow
+                  score={prediction?.awayScore ?? ""}
+                  flag={match.awayFlag}
+                  team={match.away}
+                  locked={locked}
+                  onChange={(value) =>
+                    updatePrediction(match.id, "awayScore", value)
+                  }
+                />
               </div>
 
-              <ScoreTeamRow
-                score={prediction?.awayScore ?? ""}
-                flag={match.awayFlag}
-                team={match.away}
-                locked={locked}
-                onChange={(value) =>
-                  updatePrediction(match.id, "awayScore", value)
-                }
-              />
-            </div>
-
-            <div
-              style={{
-                borderTop: "1px solid rgba(255,255,255,.12)",
-                marginTop: 28,
-                paddingTop: 20,
-                display: "flex",
-                justifyContent: "space-between",
-                gap: 20,
-                flexWrap: "wrap",
-                alignItems: "center",
-              }}
-            >
-              <div>
-                <strong>Partido #{match.matchNumber}</strong>
-                <p style={{ margin: "8px 0", opacity: 0.9 }}>
-                  {match.date} · {match.time} · {match.city}
-                </p>
-                <p style={{ margin: 0, opacity: 0.7 }}>{match.stadium}</p>
-              </div>
-
-              <button
-                onClick={() => savePrediction(match.id)}
-                disabled={locked}
+              <div
                 style={{
-                  padding: "14px 22px",
-                  borderRadius: 14,
-                  border: "none",
-                  background: locked
-                    ? "dimgray"
-                    : saved
-                    ? "linear-gradient(135deg, #00c853, #69f0ae)"
-                    : "linear-gradient(135deg, limegreen, #7CFC00)",
-                  color: "black",
-                  fontWeight: 900,
-                  cursor: locked ? "not-allowed" : "pointer",
-                  minWidth: 180,
-                  transition: "all .25s ease",
-                  boxShadow: saved
-                    ? "0 0 24px rgba(0,200,83,0.45)"
-                    : "0 0 20px rgba(50,205,50,0.35)",
+                  borderTop: "1px solid rgba(255,255,255,.12)",
+                  marginTop: 28,
+                  paddingTop: 20,
+                  display: "flex",
+                  justifyContent: "space-between",
+                  gap: 20,
+                  flexWrap: "wrap",
+                  alignItems: "center",
                 }}
               >
-                {locked
-                  ? "Bloqueado"
-                  : saved
-                  ? "✓ Guardado"
-                  : "Guardar pronóstico"}
-              </button>
+                <div>
+                  <strong>Partido #{match.matchNumber}</strong>
+                  <p style={{ margin: "8px 0", opacity: 0.9 }}>
+                    {match.date} · {match.time} · {match.city}
+                  </p>
+                  <p style={{ margin: 0, opacity: 0.7 }}>{match.stadium}</p>
+                </div>
+
+                <button
+                  onClick={() => savePrediction(match.id)}
+                  disabled={locked}
+                  style={{
+                    padding: "14px 22px",
+                    borderRadius: 14,
+                    border: "none",
+                    background: locked
+                      ? "dimgray"
+                      : saved
+                      ? "linear-gradient(135deg, #00c853, #69f0ae)"
+                      : "linear-gradient(135deg, limegreen, #7CFC00)",
+                    color: "black",
+                    fontWeight: 900,
+                    cursor: locked ? "not-allowed" : "pointer",
+                    minWidth: 180,
+                    transition: "all .25s ease",
+                    boxShadow: saved
+                      ? "0 0 24px rgba(0,200,83,0.45)"
+                      : "0 0 20px rgba(50,205,50,0.35)",
+                  }}
+                >
+                  {locked
+                    ? "Bloqueado"
+                    : saved
+                    ? "✓ Guardado"
+                    : "Guardar pronóstico"}
+                </button>
+              </div>
             </div>
-          </div>
-        );
-      })}
+          );
+        })
+      )}
     </main>
   );
 }
