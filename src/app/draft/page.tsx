@@ -5,6 +5,7 @@ import DraftHero from "@/components/draft/DraftHero";
 import DraftTeams from "@/components/draft/DraftTeams";
 import DraftTimeline from "@/components/draft/DraftTimeline";
 import DraftParticipants from "@/components/draft/DraftParticipants";
+import { supabaseBrowser } from "@/lib/supabaseBrowser";
 
 export type KnockoutTeam = {
   id: number;
@@ -64,10 +65,41 @@ export default function DraftPage() {
   }
 
   useEffect(() => {
-    loadDraft();
-    const interval = setInterval(loadDraft, 7000);
-    return () => clearInterval(interval);
-  }, []);
+  loadDraft();
+
+  const interval = setInterval(loadDraft, 15000);
+
+  const channel = supabaseBrowser()
+    .channel("draft-public-realtime")
+    .on(
+      "postgres_changes",
+      {
+        event: "*",
+        schema: "public",
+        table: "draft_picks",
+      },
+      () => {
+        loadDraft();
+      }
+    )
+    .on(
+      "postgres_changes",
+      {
+        event: "*",
+        schema: "public",
+        table: "knockout_teams",
+      },
+      () => {
+        loadDraft();
+      }
+    )
+    .subscribe();
+
+  return () => {
+    clearInterval(interval);
+    supabaseBrowser().removeChannel(channel);
+  };
+}, []);
 
   const progress = useMemo(() => {
     if (!data || data.total_picks === 0) return 0;
