@@ -21,7 +21,13 @@ function getDraftStatus(now: number): DraftStatus {
   return "finished";
 }
 
-function DraftBadge({ status, mobile = false }: { status: DraftStatus; mobile?: boolean }) {
+function DraftBadge({
+  status,
+  mobile = false,
+}: {
+  status: DraftStatus;
+  mobile?: boolean;
+}) {
   if (status === "live") {
     return (
       <span className={mobile ? mobileLiveBadge : liveBadge}>
@@ -57,8 +63,7 @@ export default function AppHeader() {
   const draftStatus = useMemo(() => getDraftStatus(now), [now]);
 
   const isAdmin =
-    !!user?.email &&
-    ADMIN_EMAILS.includes(user.email.toLowerCase());
+    !!user?.email && ADMIN_EMAILS.includes(user.email.toLowerCase());
 
   function isActive(path: string) {
     return pathname === path;
@@ -117,8 +122,7 @@ export default function AppHeader() {
     await supabase.auth.signOut();
     window.location.href = "/";
   }
-
-  return (
+    return (
     <header className="sticky top-0 z-50 border-b border-white/10 bg-black/95 backdrop-blur">
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 md:px-7 md:py-4">
         <Link
@@ -152,21 +156,27 @@ export default function AppHeader() {
             <>
               <Link
                 href="/quiniela"
-                className={isActive("/quiniela") ? activePrimaryButton : navButton}
+                className={
+                  isActive("/quiniela") ? activePrimaryButton : navButton
+                }
               >
                 Quiniela
               </Link>
 
               <Link
                 href="/calendario"
-                className={isActive("/calendario") ? activePrimaryButton : navButton}
+                className={
+                  isActive("/calendario") ? activePrimaryButton : navButton
+                }
               >
                 Calendario
               </Link>
 
               <Link
                 href="/grupos"
-                className={isActive("/grupos") ? activePrimaryButton : navButton}
+                className={
+                  isActive("/grupos") ? activePrimaryButton : navButton
+                }
               >
                 Grupos
               </Link>
@@ -183,7 +193,9 @@ export default function AppHeader() {
 
               <Link
                 href="/pronosticos"
-                className={isActive("/pronosticos") ? activeGoldButton : navButton}
+                className={
+                  isActive("/pronosticos") ? activeGoldButton : navButton
+                }
               >
                 Pronósticos
               </Link>
@@ -197,25 +209,42 @@ export default function AppHeader() {
 
               <Link
                 href="/participation"
-                className={isActive("/participation") ? activePrimaryButton : navButton}
+                className={
+                  isActive("/participation") ? activePrimaryButton : navButton
+                }
               >
                 Participación
               </Link>
 
               <Link
                 href="/leaderboard"
-                className={isActive("/leaderboard") ? activePrimaryButton : navButton}
+                className={
+                  isActive("/leaderboard") ? activePrimaryButton : navButton
+                }
               >
                 Leaderboard
               </Link>
 
               {isAdmin && (
-                <Link
-                  href="/admin"
-                  className={isActive("/admin") ? activeGoldButton : navButton}
-                >
-                  Admin
-                </Link>
+                <>
+                  <Link
+                    href="/admin"
+                    className={
+                      isActive("/admin") ? activeGoldButton : navButton
+                    }
+                  >
+                    Admin
+                  </Link>
+
+                  <Link
+                    href="/admin/draft"
+                    className={
+                      isActive("/admin/draft") ? activeDraftButton : draftButton
+                    }
+                  >
+                    🏆 Draft Admin
+                  </Link>
+                </>
               )}
 
               <button onClick={handleLogout} className={logoutButton}>
@@ -240,67 +269,112 @@ export default function AppHeader() {
           <>
             <Link
               href="/quiniela"
-              className={isActive("/quiniela") ? mobileActivePrimaryButton : mobileNavButton}
+              className={
+                isActive("/quiniela")
+                  ? mobileActivePrimaryButton
+                  : mobileNavButton
+              }
             >
               Quiniela
             </Link>
 
             <Link
               href="/calendario"
-              className={isActive("/calendario") ? mobileActivePrimaryButton : mobileNavButton}
+              className={
+                isActive("/calendario")
+                  ? mobileActivePrimaryButton
+                  : mobileNavButton
+              }
             >
               Calendario
             </Link>
 
             <Link
               href="/grupos"
-              className={isActive("/grupos") ? mobileActivePrimaryButton : mobileNavButton}
+              className={
+                isActive("/grupos")
+                  ? mobileActivePrimaryButton
+                  : mobileNavButton
+              }
             >
               Grupos
             </Link>
 
             <Link
               href="/draft"
-              className={isActive("/draft") ? mobileActiveDraftButton : mobileDraftButton}
+              className={
+                isActive("/draft") ? mobileActiveDraftButton : mobileDraftButton
+              }
             >
               🏆 Draft
             </Link>
 
             <Link
               href="/pronosticos"
-              className={isActive("/pronosticos") ? mobileActiveGoldButton : mobileNavButton}
+              className={
+                isActive("/pronosticos")
+                  ? mobileActiveGoldButton
+                  : mobileNavButton
+              }
             >
               Pronósticos
             </Link>
 
             <Link
               href="/pagos"
-              className={isActive("/pagos") ? mobileActiveGoldButton : mobileNavButton}
+              className={
+                isActive("/pagos") ? mobileActiveGoldButton : mobileNavButton
+              }
             >
               Pagos
             </Link>
 
             <Link
               href="/participation"
-              className={isActive("/participation") ? mobileActivePrimaryButton : mobileNavButton}
+              className={
+                isActive("/participation")
+                  ? mobileActivePrimaryButton
+                  : mobileNavButton
+              }
             >
               Participación
             </Link>
 
             <Link
               href="/leaderboard"
-              className={isActive("/leaderboard") ? mobileActivePrimaryButton : mobileNavButton}
+              className={
+                isActive("/leaderboard")
+                  ? mobileActivePrimaryButton
+                  : mobileNavButton
+              }
             >
               Tabla
             </Link>
 
             {isAdmin && (
-              <Link
-                href="/admin"
-                className={isActive("/admin") ? mobileActiveGoldButton : mobileNavButton}
-              >
-                Admin
-              </Link>
+              <>
+                <Link
+                  href="/admin"
+                  className={
+                    isActive("/admin")
+                      ? mobileActiveGoldButton
+                      : mobileNavButton
+                  }
+                >
+                  Admin
+                </Link>
+
+                <Link
+                  href="/admin/draft"
+                  className={
+                    isActive("/admin/draft")
+                      ? mobileActiveDraftButton
+                      : mobileDraftButton
+                  }
+                >
+                  🏆 Draft Admin
+                </Link>
+              </>
             )}
 
             <button onClick={handleLogout} className={mobileLogoutButton}>
@@ -312,7 +386,6 @@ export default function AppHeader() {
     </header>
   );
 }
-
 function getMillisecondsUntilEndOfDayMexicoCity() {
   const now = new Date();
 
