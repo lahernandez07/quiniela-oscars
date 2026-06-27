@@ -76,14 +76,25 @@ export default function DraftPage() {
 
   const lastPick = useMemo(() => {
     if (!data) return null;
-    return [...data.picks]
-      .reverse()
-      .find((pick) => pick.team_id !== null && pick.knockout_teams) ?? null;
+    return (
+      [...data.picks]
+        .reverse()
+        .find((pick) => pick.team_id !== null && pick.knockout_teams) ?? null
+    );
   }, [data]);
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-slate-950 px-4 py-8 text-white">
+      <main
+        className="min-h-screen px-4 py-8 text-white"
+        style={{
+          background:
+            "linear-gradient(rgba(0,0,0,0.80), rgba(0,0,0,0.94)), url('/worldcup-bg.jpg')",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          backgroundAttachment: "fixed",
+        }}
+      >
         <p>Cargando Draft Panteras...</p>
       </main>
     );
@@ -91,14 +102,32 @@ export default function DraftPage() {
 
   if (!data) {
     return (
-      <main className="min-h-screen bg-slate-950 px-4 py-8 text-white">
+      <main
+        className="min-h-screen px-4 py-8 text-white"
+        style={{
+          background:
+            "linear-gradient(rgba(0,0,0,0.80), rgba(0,0,0,0.94)), url('/worldcup-bg.jpg')",
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          backgroundAttachment: "fixed",
+        }}
+      >
         <p className="text-red-300">No se pudo cargar el draft.</p>
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top,#172554_0,#020617_45%,#020617_100%)] px-4 py-6 text-white">
+    <main
+      className="min-h-screen px-4 py-6 text-white"
+      style={{
+        background:
+          "linear-gradient(rgba(0,0,0,0.80), rgba(0,0,0,0.94)), url('/worldcup-bg.jpg')",
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundAttachment: "fixed",
+      }}
+    >
       <div className="mx-auto max-w-7xl space-y-6">
         <DraftHero
           currentPick={data.current_pick}
