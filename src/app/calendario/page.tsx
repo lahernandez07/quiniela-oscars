@@ -122,7 +122,14 @@ export default function CalendarioPage() {
           ].map((cut) => (
             <button
               key={cut.value}
-              onClick={() => setSelectedCut(cut.value as CutFilter)}
+              onClick={() => {
+                const value = cut.value as CutFilter;
+                setSelectedCut(value);
+
+                if (value === "Hoy") {
+                  setSelectedDate("Todos");
+                }
+              }}
               className={selectedCut === cut.value ? "cut active" : "cut"}
             >
               {cut.label}
@@ -141,7 +148,14 @@ export default function CalendarioPage() {
 
           <select
             value={selectedDate}
-            onChange={(e) => setSelectedDate(e.target.value)}
+            onChange={(e) => {
+              const value = e.target.value;
+              setSelectedDate(value);
+
+              if (value !== "Todos") {
+                setSelectedCut("Todos");
+              }
+            }}
           >
             {dates.map((date) => (
               <option key={date} value={date}>
