@@ -37,6 +37,46 @@ type DraftData = {
   available_teams: KnockoutTeam[];
 };
 
+const FIFA_RANKING_ORDER = [
+  "Argentina",
+  "España",
+  "Francia",
+  "Inglaterra",
+  "Brasil",
+  "Portugal",
+  "Países Bajos",
+  "Bélgica",
+  "Alemania",
+  "Croacia",
+  "Marruecos",
+  "México",
+  "Estados Unidos",
+  "Colombia",
+  "Japón",
+  "Suiza",
+  "Senegal",
+  "Ecuador",
+  "Austria",
+  "Paraguay",
+  "Noruega",
+  "Canadá",
+  "Australia",
+  "Suecia",
+  "Costa de Marfil",
+  "Ghana",
+  "Argelia",
+  "Bosnia y Herzegovina",
+  "Egipto",
+  "Sudáfrica",
+  "RD Congo",
+  "Islas de Cabo Verde",
+];
+
+function getFifaRank(teamName: string) {
+  const index = FIFA_RANKING_ORDER.indexOf(teamName);
+  return index === -1 ? 999 : index + 1;
+}
+
 export default function AdminDraftPage() {
   const [data, setData] = useState<DraftData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -94,6 +134,14 @@ export default function AdminDraftPage() {
   const progress = useMemo(() => {
     if (!data || data.total_picks === 0) return 0;
     return Math.round((data.completed_picks / data.total_picks) * 100);
+  }, [data]);
+
+  const orderedAvailableTeams = useMemo(() => {
+    if (!data) return [];
+
+    return [...data.available_teams].sort(
+      (a, b) => getFifaRank(a.team_name) - getFifaRank(b.team_name)
+    );
   }, [data]);
 
   async function confirmPick() {
@@ -289,7 +337,7 @@ export default function AdminDraftPage() {
               </div>
             ) : (
               <div className="mt-5 grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-4">
-                {data.available_teams.map((team) => {
+                {orderedAvailableTeams.map((team) => {
                   const isSelected = selectedTeam?.id === team.id;
 
                   return (
@@ -317,7 +365,7 @@ export default function AdminDraftPage() {
                               : "bg-cyan-400/15 text-cyan-200"
                           }`}
                         >
-                          {isSelected ? "Elegido" : "Libre"}
+                          {isSelected ? "Elegido" : `FIFA #${getFifaRank(team.team_name)}`}
                         </span>
                       </div>
 
