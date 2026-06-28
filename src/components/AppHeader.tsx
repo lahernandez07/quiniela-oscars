@@ -155,15 +155,6 @@ export default function AppHeader() {
           {!loading && user && (
             <>
               <Link
-                href="/quiniela"
-                className={
-                  isActive("/quiniela") ? activePrimaryButton : navButton
-                }
-              >
-                Quiniela
-              </Link>
-
-              <Link
                 href="/calendario"
                 className={
                   isActive("/calendario") ? activePrimaryButton : navButton
@@ -189,31 +180,6 @@ export default function AppHeader() {
                   <span>🏆 Draft Day</span>
                   <DraftBadge status={draftStatus} />
                 </div>
-              </Link>
-
-              <Link
-                href="/pronosticos"
-                className={
-                  isActive("/pronosticos") ? activeGoldButton : navButton
-                }
-              >
-                Pronósticos
-              </Link>
-
-              <Link
-                href="/pagos"
-                className={isActive("/pagos") ? activeGoldButton : navButton}
-              >
-                Pagos
-              </Link>
-
-              <Link
-                href="/participation"
-                className={
-                  isActive("/participation") ? activePrimaryButton : navButton
-                }
-              >
-                Participación
               </Link>
 
               <Link
@@ -268,17 +234,6 @@ export default function AppHeader() {
         {!loading && user && (
           <>
             <Link
-              href="/quiniela"
-              className={
-                isActive("/quiniela")
-                  ? mobileActivePrimaryButton
-                  : mobileNavButton
-              }
-            >
-              Quiniela
-            </Link>
-
-            <Link
               href="/calendario"
               className={
                 isActive("/calendario")
@@ -307,37 +262,6 @@ export default function AppHeader() {
               }
             >
               🏆 Draft
-            </Link>
-
-            <Link
-              href="/pronosticos"
-              className={
-                isActive("/pronosticos")
-                  ? mobileActiveGoldButton
-                  : mobileNavButton
-              }
-            >
-              Pronósticos
-            </Link>
-
-            <Link
-              href="/pagos"
-              className={
-                isActive("/pagos") ? mobileActiveGoldButton : mobileNavButton
-              }
-            >
-              Pagos
-            </Link>
-
-            <Link
-              href="/participation"
-              className={
-                isActive("/participation")
-                  ? mobileActivePrimaryButton
-                  : mobileNavButton
-              }
-            >
-              Participación
             </Link>
 
             <Link
