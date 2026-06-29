@@ -107,8 +107,8 @@ export default function HomePage() {
                   Supervivencia
                 </Link>
 
-                <Link href="/leaderboard" style={secondaryButton}>
-                  Ver tablero
+                <Link href="/calendario" style={secondaryButton}>
+                  Calendario
                 </Link>
 
                 {isAdmin && (
@@ -154,18 +154,18 @@ export default function HomePage() {
                     marginBottom: 6,
                   }}
                 >
-                  TABLA GENERAL
+                  CALENDARIO
                 </div>
 
-                <h2 style={{ margin: 0 }}>Top 5 de la quiniela</h2>
+                <h2 style={{ margin: 0 }}>Partidos de eliminación directa</h2>
 
                 <p style={{ color: "lightgray" }}>
-                  Consulta la tabla general de participantes.
+                  Consulta fechas, horarios y cruces del Mundial.
                 </p>
               </div>
 
-              <Link href="/leaderboard" style={primaryButton}>
-                Ver tabla completa
+              <Link href="/calendario" style={primaryButton}>
+                Ver calendario
               </Link>
             </div>
           </section>
