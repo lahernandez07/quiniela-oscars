@@ -15,7 +15,11 @@ export default function DraftParticipants({ participants }: Props) {
       </p>
 
       <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {participants.map((participant) => (
+        {[...participants]
+          .sort(
+            (a, b) => a.leaderboard_position - b.leaderboard_position
+          )
+          .map((participant) => (
           <div
             key={participant.user_id}
             className="rounded-3xl border border-white/10 bg-white/5 p-5"

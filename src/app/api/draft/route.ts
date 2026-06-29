@@ -28,6 +28,31 @@ type DraftPick = Omit<DraftPickRaw, "knockout_teams"> & {
   knockout_teams: KnockoutTeam | null;
 };
 
+const FINAL_LEADERBOARD_ORDER = [
+  "Hector Guerra",
+  "Armando Barajas",
+  "Alejandro Quiroz",
+  "Luis Arreola",
+  "mario jalil",
+  "jose tamez",
+  "Gerardo Gutierrez Flores",
+  "LUIS ALEJANDRO HERNANDEZ GARCIA",
+  "jose luis cantu",
+  "Jose luis",
+];
+
+function normalizeName(value: string) {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
+}
+
+const finalLeaderboardPosition = new Map(
+  FINAL_LEADERBOARD_ORDER.map((name, index) => [normalizeName(name), index + 1])
+);
+
 function normalizePick(pick: DraftPickRaw): DraftPick {
   const team = Array.isArray(pick.knockout_teams)
     ? pick.knockout_teams[0] ?? null
@@ -164,8 +189,13 @@ export async function GET() {
     picks: draftPicks,
     teams: knockoutTeams,
     available_teams: availableTeams,
-    participants: Object.values(picksByParticipant).sort(
-      (a, b) => a.leaderboard_position - b.leaderboard_position
-    ),
+    participants: Object.values(picksByParticipant)
+      .map((participant) => ({
+        ...participant,
+        leaderboard_position:
+          finalLeaderboardPosition.get(normalizeName(participant.user_name)) ??
+          participant.leaderboard_position,
+      }))
+      .sort((a, b) => a.leaderboard_position - b.leaderboard_position),
   });
 }
