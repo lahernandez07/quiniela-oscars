@@ -164,14 +164,6 @@ export default function AppHeader() {
                     Admin
                   </Link>
 
-                  <Link
-                    href="/admin/draft"
-                    className={
-                      isActive("/admin/draft") ? activeDraftButton : draftButton
-                    }
-                  >
-                    🏆 Draft Admin
-                  </Link>
                 </>
               )}
 
@@ -250,16 +242,6 @@ export default function AppHeader() {
                   Admin
                 </Link>
 
-                <Link
-                  href="/admin/draft"
-                  className={
-                    isActive("/admin/draft")
-                      ? mobileActiveDraftButton
-                      : mobileDraftButton
-                  }
-                >
-                  🏆 Draft Admin
-                </Link>
               </>
             )}
 
