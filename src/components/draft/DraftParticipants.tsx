@@ -35,10 +35,17 @@ export default function DraftParticipants({ participants }: Props) {
             <div className="mt-5 space-y-3">
               {participant.picks
                 .sort((a, b) => a.pick_number - b.pick_number)
-                .map((pick, index) => (
+                .map((pick, index) => {
+                  const isEliminated = pick.knockout_teams?.is_eliminated === true;
+
+                  return (
                   <div
                     key={pick.id}
-                    className="flex items-center justify-between rounded-2xl bg-black/35 px-4 py-3"
+                    className={
+                      isEliminated
+                        ? "flex items-center justify-between rounded-2xl border border-red-400/35 bg-red-950/35 px-4 py-3 opacity-80"
+                        : "flex items-center justify-between rounded-2xl bg-black/35 px-4 py-3"
+                    }
                   >
                     <div>
                       <p className="text-xs text-slate-500">
@@ -47,6 +54,11 @@ export default function DraftParticipants({ participants }: Props) {
                       <p className="text-sm font-black">
                         Pick #{pick.pick_number}
                       </p>
+                      {isEliminated && (
+                        <span className="mt-1 inline-flex rounded-full border border-red-400/40 bg-red-500/15 px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.18em] text-red-200">
+                          Eliminada
+                        </span>
+                      )}
                     </div>
 
                     {pick.knockout_teams ? (
@@ -56,7 +68,13 @@ export default function DraftParticipants({ participants }: Props) {
                           name={pick.knockout_teams.team_name}
                           style={{ width: 36, borderRadius: 7 }}
                         />
-                        <span className="text-sm font-black">
+                        <span
+                          className={
+                            isEliminated
+                              ? "text-sm font-black text-red-300 line-through decoration-red-400 decoration-2"
+                              : "text-sm font-black text-white"
+                          }
+                        >
                           {pick.knockout_teams.team_name}
                         </span>
                       </div>
@@ -64,7 +82,8 @@ export default function DraftParticipants({ participants }: Props) {
                       <span className="text-sm text-slate-500">—</span>
                     )}
                   </div>
-                ))}
+                  );
+                })}
             </div>
           </div>
         ))}
