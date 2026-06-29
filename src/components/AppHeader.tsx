@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 
 const ADMIN_EMAILS = [
@@ -10,44 +10,15 @@ const ADMIN_EMAILS = [
   "josetamezg@gmail.com",
 ];
 
-const DRAFT_START_TIME = new Date("2026-06-28T11:00:00-06:00").getTime();
-const DRAFT_END_TIME = new Date("2026-06-28T13:00:00-06:00").getTime();
 
-type DraftStatus = "upcoming" | "live" | "finished";
+type SurvivalStatus = "active";
 
-function getDraftStatus(now: number): DraftStatus {
-  if (now < DRAFT_START_TIME) return "upcoming";
-  if (now <= DRAFT_END_TIME) return "live";
-  return "finished";
-}
 
-function DraftBadge({
-  status,
-  mobile = false,
-}: {
-  status: DraftStatus;
-  mobile?: boolean;
-}) {
-  if (status === "live") {
-    return (
-      <span className={mobile ? mobileLiveBadge : liveBadge}>
-        <span className="h-2 w-2 animate-pulse rounded-full bg-lime-300" />
-        EN VIVO
-      </span>
-    );
-  }
-
-  if (status === "finished") {
-    return (
-      <span className={mobile ? mobileFinishedBadge : finishedBadge}>
-        ✓ Finalizado
-      </span>
-    );
-  }
-
+function SurvivalBadge({ mobile = false }: { status?: SurvivalStatus; mobile?: boolean }) {
   return (
-    <span className={mobile ? mobileUpcomingBadge : upcomingBadge}>
-      ● Próximamente
+    <span className={mobile ? mobileLiveBadge : liveBadge}>
+      <span className="h-2 w-2 animate-pulse rounded-full bg-lime-300" />
+      EN CURSO
     </span>
   );
 }
@@ -58,9 +29,7 @@ export default function AppHeader() {
 
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [now, setNow] = useState(Date.now());
 
-  const draftStatus = useMemo(() => getDraftStatus(now), [now]);
 
   const isAdmin =
     !!user?.email && ADMIN_EMAILS.includes(user.email.toLowerCase());
@@ -69,13 +38,6 @@ export default function AppHeader() {
     return pathname === path;
   }
 
-  useEffect(() => {
-    const timer = window.setInterval(() => {
-      setNow(Date.now());
-    }, 30000);
-
-    return () => window.clearInterval(timer);
-  }, []);
 
   useEffect(() => {
     async function loadUser() {
@@ -177,8 +139,8 @@ export default function AppHeader() {
                 className={isActive("/draft") ? activeDraftButton : draftButton}
               >
                 <div className="flex flex-col items-center leading-none">
-                  <span>🏆 Draft Day</span>
-                  <DraftBadge status={draftStatus} />
+                  <span>🏆 Supervivencia</span>
+                  <SurvivalBadge />
                 </div>
               </Link>
 
@@ -261,7 +223,7 @@ export default function AppHeader() {
                 isActive("/draft") ? mobileActiveDraftButton : mobileDraftButton
               }
             >
-              🏆 Draft
+              🏆 Supervivencia
             </Link>
 
             <Link
