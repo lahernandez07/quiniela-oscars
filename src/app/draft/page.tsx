@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import DraftHero from "@/components/draft/DraftHero";
 import DraftParticipants from "@/components/draft/DraftParticipants";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
@@ -99,20 +99,6 @@ export default function DraftPage() {
   };
 }, []);
 
-  const progress = useMemo(() => {
-    if (!data || data.total_picks === 0) return 0;
-    return Math.round((data.completed_picks / data.total_picks) * 100);
-  }, [data]);
-
-  const lastPick = useMemo(() => {
-    if (!data) return null;
-    return (
-      [...data.picks]
-        .reverse()
-        .find((pick) => pick.team_id !== null && pick.knockout_teams) ?? null
-    );
-  }, [data]);
-
   if (loading) {
     return (
       <main
@@ -159,13 +145,7 @@ export default function DraftPage() {
       }}
     >
       <div className="mx-auto max-w-7xl space-y-6">
-        <DraftHero
-          currentPick={data.current_pick}
-          completedPicks={data.completed_picks}
-          totalPicks={data.total_picks}
-          progress={progress}
-          lastPick={lastPick}
-        />
+        <DraftHero participants={data.participants ?? []} />
 
         <DraftParticipants participants={data.participants} />
       </div>
