@@ -87,8 +87,8 @@ export default function HomePage() {
             marginBottom: 34,
           }}
         >
-          Captura tus pronósticos de la fase de grupos, compite por semanas
-          y pelea por el campeonato general de la quiniela.
+          La fase de grupos terminó. Ahora sigue la etapa de supervivencia:
+          cada participante sigue con vida mientras conserve selecciones activas.
         </p>
 
         {!checking && (
@@ -103,12 +103,8 @@ export default function HomePage() {
               >
             {user ? (
               <>
-                <Link href="/quiniela" style={primaryButton}>
-                  Capturar pronósticos
-                </Link>
-
-                <Link href="/pronosticos" style={goldButton}>
-                  Ver pronósticos
+                <Link href="/draft" style={primaryButton}>
+                  Supervivencia
                 </Link>
 
                 <Link href="/leaderboard" style={secondaryButton}>
