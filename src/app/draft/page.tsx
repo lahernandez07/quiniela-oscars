@@ -2,8 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 import DraftHero from "@/components/draft/DraftHero";
-import DraftTeams from "@/components/draft/DraftTeams";
-import DraftTimeline from "@/components/draft/DraftTimeline";
 import DraftParticipants from "@/components/draft/DraftParticipants";
 import { supabaseBrowser } from "@/lib/supabaseBrowser";
 
@@ -168,11 +166,6 @@ export default function DraftPage() {
           progress={progress}
           lastPick={lastPick}
         />
-
-        <section className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
-          <DraftTeams teams={data.available_teams} />
-          <DraftTimeline picks={data.picks} currentPick={data.current_pick} />
-        </section>
 
         <DraftParticipants participants={data.participants} />
       </div>
