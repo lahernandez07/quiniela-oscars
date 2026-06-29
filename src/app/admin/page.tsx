@@ -9,17 +9,28 @@ type MatchResult = {
   match_id: number;
   home_score: number;
   away_score: number;
+  decided_by_penalties?: boolean;
+  home_penalty_score?: number | null;
+  away_penalty_score?: number | null;
+  winner_side?: "home" | "away" | null;
+  winner_team?: string | null;
+  eliminated_team?: string | null;
   updated_at?: string;
 };
 
 type Match = {
   id: number;
   matchNumber: number;
-  group: string;
+  stage?: string;
+  round?: string;
+  group: string | null;
   home: string;
   away: string;
   homeFlag: string;
   awayFlag: string;
+  homePlaceholder?: string;
+  awayPlaceholder?: string;
+  defined?: boolean;
   date: string;
   time: string;
   stadium: string;
@@ -30,9 +41,40 @@ type Match = {
 type ResultInput = {
   homeScore: string;
   awayScore: string;
+  decidedByPenalties: boolean;
+  homePenaltyScore: string;
+  awayPenaltyScore: string;
+  winnerSide: "home" | "away" | "";
 };
 
 type FilterType = "pending" | "captured" | "today" | "yesterday" | "all";
+
+function isKnockoutMatch(match: Match) {
+  return Boolean(match.round) || Number(match.matchNumber) >= 73;
+}
+
+function isMatchDefined(match: Match) {
+  if (!isKnockoutMatch(match)) return true;
+  return match.defined === true && !!match.home && !!match.away;
+}
+
+function getDisplayTeam(match: Match, side: "home" | "away") {
+  if (side === "home") {
+    return match.home || match.homePlaceholder || "Equipo por definir";
+  }
+
+  return match.away || match.awayPlaceholder || "Equipo por definir";
+}
+
+function getDisplayFlag(match: Match, side: "home" | "away") {
+  if (!isMatchDefined(match)) return "un";
+  return side === "home" ? match.homeFlag : match.awayFlag;
+}
+
+function isOfficialScoreTied(result?: ResultInput) {
+  if (!result?.homeScore || !result?.awayScore) return false;
+  return Number(result.homeScore) === Number(result.awayScore);
+}
 
 export default function AdminPage() {
   const supabase = supabaseBrowser();
@@ -96,11 +138,27 @@ export default function AdminPage() {
           map[match.id] = {
             homeScore: String(match.result.home_score),
             awayScore: String(match.result.away_score),
+            decidedByPenalties: Boolean(match.result.decided_by_penalties),
+            homePenaltyScore:
+              match.result.home_penalty_score === null ||
+              match.result.home_penalty_score === undefined
+                ? ""
+                : String(match.result.home_penalty_score),
+            awayPenaltyScore:
+              match.result.away_penalty_score === null ||
+              match.result.away_penalty_score === undefined
+                ? ""
+                : String(match.result.away_penalty_score),
+            winnerSide: match.result.winner_side ?? "",
           };
         } else {
           map[match.id] = {
             homeScore: "",
             awayScore: "",
+            decidedByPenalties: false,
+            homePenaltyScore: "",
+            awayPenaltyScore: "",
+            winnerSide: "",
           };
         }
       });
@@ -115,8 +173,14 @@ export default function AdminPage() {
 
   function updateResult(
     matchId: number,
-    field: "homeScore" | "awayScore",
-    value: string
+    field:
+      | "homeScore"
+      | "awayScore"
+      | "decidedByPenalties"
+      | "homePenaltyScore"
+      | "awayPenaltyScore"
+      | "winnerSide",
+    value: string | boolean
   ) {
     setSavedMatchId(null);
 
@@ -125,6 +189,10 @@ export default function AdminPage() {
       [matchId]: {
         homeScore: prev[matchId]?.homeScore ?? "",
         awayScore: prev[matchId]?.awayScore ?? "",
+        decidedByPenalties: prev[matchId]?.decidedByPenalties ?? false,
+        homePenaltyScore: prev[matchId]?.homePenaltyScore ?? "",
+        awayPenaltyScore: prev[matchId]?.awayPenaltyScore ?? "",
+        winnerSide: prev[matchId]?.winnerSide ?? "",
         [field]: value,
       },
     }));
@@ -132,10 +200,31 @@ export default function AdminPage() {
 
   async function saveResult(matchId: number) {
     const result = results[matchId];
+    const match = matches.find((item) => item.id === matchId);
+
+    if (!match || !isMatchDefined(match)) {
+      alert("Este partido todavía no tiene equipos definidos.");
+      return;
+    }
 
     if (!result?.homeScore || !result?.awayScore) {
       alert("Captura ambos marcadores oficiales.");
       return;
+    }
+
+    const mustCapturePenalties =
+      isKnockoutMatch(match) && isOfficialScoreTied(result);
+
+    if (mustCapturePenalties) {
+      if (!result.homePenaltyScore || !result.awayPenaltyScore) {
+        alert("El partido terminó empatado. Captura el marcador de penales.");
+        return;
+      }
+
+      if (!result.winnerSide) {
+        alert("Selecciona el ganador de la tanda de penales.");
+        return;
+      }
     }
 
     try {
@@ -150,6 +239,14 @@ export default function AdminPage() {
           match_id: matchId,
           home_score: Number(result.homeScore),
           away_score: Number(result.awayScore),
+          decided_by_penalties: mustCapturePenalties,
+          home_penalty_score: mustCapturePenalties
+            ? Number(result.homePenaltyScore)
+            : null,
+          away_penalty_score: mustCapturePenalties
+            ? Number(result.awayPenaltyScore)
+            : null,
+          winner_side: mustCapturePenalties ? result.winnerSide : null,
         }),
       });
 
@@ -207,16 +304,14 @@ export default function AdminPage() {
   }
 
   function hasResult(match: Match) {
-    const current = results[match.id];
-
-    return current?.homeScore !== "" && current?.awayScore !== "";
+    return match.result !== null;
   }
 
   const today = getMexicoCityDate(0);
   const yesterday = getMexicoCityDate(-1);
 
   const groups = useMemo(() => {
-    return Array.from(new Set(matches.map((match) => match.group))).sort();
+    return Array.from(new Set(matches.map((match) => match.group ?? "Sin grupo"))).sort();
   }, [matches]);
 
   const counters = useMemo(() => {
@@ -239,7 +334,7 @@ export default function AdminPage() {
   const filteredMatches = useMemo(() => {
     return matches
       .filter((match) => {
-        if (selectedGroup !== "all" && match.group !== selectedGroup) {
+        if (selectedGroup !== "all" && (match.group ?? "Sin grupo") !== selectedGroup) {
           return false;
         }
 
@@ -386,13 +481,16 @@ export default function AdminPage() {
         filteredMatches.map((match) => {
           const current = results[match.id];
           const resultCaptured = hasResult(match);
+          const defined = isMatchDefined(match);
+          const showPenaltyFields =
+            isKnockoutMatch(match) && isOfficialScoreTied(current);
 
           return (
             <div key={match.id} style={matchCardStyle}>
               <div style={matchHeaderStyle}>
                 <div>
                   <div style={matchMetaStyle}>
-                    Partido #{match.matchNumber} · {match.group}
+                    Partido #{match.matchNumber} · {match.group ?? match.round ?? "Eliminatoria"}
                   </div>
 
                   <div>
@@ -408,15 +506,15 @@ export default function AdminPage() {
                     fontWeight: 900,
                   }}
                 >
-                  {resultCaptured ? "CAPTURADO" : "PENDIENTE"}
+                  {!defined ? "POR DEFINIR" : resultCaptured ? "CAPTURADO" : "PENDIENTE"}
                 </div>
               </div>
 
               <div style={scoreGridStyle}>
                 <AdminScoreRow
                   score={current?.homeScore ?? ""}
-                  team={match.home}
-                  flag={match.homeFlag}
+                  team={getDisplayTeam(match, "home")}
+                  flag={getDisplayFlag(match, "home")}
                   onChange={(value) =>
                     updateResult(match.id, "homeScore", value)
                   }
@@ -426,26 +524,104 @@ export default function AdminPage() {
 
                 <AdminScoreRow
                   score={current?.awayScore ?? ""}
-                  team={match.away}
-                  flag={match.awayFlag}
+                  team={getDisplayTeam(match, "away")}
+                  flag={getDisplayFlag(match, "away")}
                   onChange={(value) =>
                     updateResult(match.id, "awayScore", value)
                   }
                 />
               </div>
 
+              {showPenaltyFields && (
+                <section style={penaltyCardStyle}>
+                  <div style={penaltyToggleStyle}>
+                    Partido empatado · Captura penales
+                  </div>
+
+                  <div style={penaltyDetailsStyle}>
+                    <div style={penaltyScoresStyle}>
+                      <label style={penaltyInputLabelStyle}>
+                        <span>{getDisplayTeam(match, "home")}</span>
+                        <input
+                          type="number"
+                          min="0"
+                          value={current?.homePenaltyScore ?? ""}
+                          onChange={(event) =>
+                            updateResult(
+                              match.id,
+                              "homePenaltyScore",
+                              event.target.value
+                            )
+                          }
+                          style={penaltyInputStyle}
+                        />
+                      </label>
+
+                      <label style={penaltyInputLabelStyle}>
+                        <span>{getDisplayTeam(match, "away")}</span>
+                        <input
+                          type="number"
+                          min="0"
+                          value={current?.awayPenaltyScore ?? ""}
+                          onChange={(event) =>
+                            updateResult(
+                              match.id,
+                              "awayPenaltyScore",
+                              event.target.value
+                            )
+                          }
+                          style={penaltyInputStyle}
+                        />
+                      </label>
+                    </div>
+
+                    <div style={winnerBoxStyle}>
+                      <div style={winnerTitleStyle}>Ganador oficial</div>
+
+                      <label style={winnerOptionStyle}>
+                        <input
+                          type="radio"
+                          name={`winner-${match.id}`}
+                          checked={current?.winnerSide === "home"}
+                          onChange={() =>
+                            updateResult(match.id, "winnerSide", "home")
+                          }
+                        />
+                        {getDisplayTeam(match, "home")}
+                      </label>
+
+                      <label style={winnerOptionStyle}>
+                        <input
+                          type="radio"
+                          name={`winner-${match.id}`}
+                          checked={current?.winnerSide === "away"}
+                          onChange={() =>
+                            updateResult(match.id, "winnerSide", "away")
+                          }
+                        />
+                        {getDisplayTeam(match, "away")}
+                      </label>
+                    </div>
+                  </div>
+                </section>
+              )}
+
               <div style={saveRowStyle}>
                 <button
                   onClick={() => saveResult(match.id)}
-                  disabled={savingMatchId === match.id}
+                  disabled={savingMatchId === match.id || !defined}
                   style={{
                     ...greenButton,
-                    opacity: savingMatchId === match.id ? 0.6 : 1,
+                    opacity: savingMatchId === match.id || !defined ? 0.6 : 1,
                     cursor:
-                      savingMatchId === match.id ? "not-allowed" : "pointer",
+                      savingMatchId === match.id || !defined
+                        ? "not-allowed"
+                        : "pointer",
                   }}
                 >
-                  {savingMatchId === match.id
+                  {!defined
+                    ? "Cruce pendiente"
+                    : savingMatchId === match.id
                     ? "Guardando..."
                     : savedMatchId === match.id
                     ? "✓ Guardado"
@@ -713,4 +889,73 @@ const greenButton = {
 const yellowButton = {
   ...greenButton,
   background: "linear-gradient(135deg, #FFCC00, #FFE066)",
+};
+const penaltyCardStyle = {
+  marginTop: 24,
+  padding: 18,
+  borderRadius: 20,
+  border: "1px solid rgba(255,204,0,.22)",
+  background: "rgba(255,204,0,.07)",
+};
+
+const penaltyToggleStyle = {
+  display: "flex",
+  alignItems: "center",
+  gap: 10,
+  fontWeight: 900,
+  color: "#FFCC00",
+  cursor: "pointer",
+};
+
+const penaltyDetailsStyle = {
+  marginTop: 18,
+  display: "grid",
+  gridTemplateColumns: "1fr",
+  gap: 16,
+};
+
+const penaltyScoresStyle = {
+  display: "grid",
+  gridTemplateColumns: "1fr 1fr",
+  gap: 14,
+};
+
+const penaltyInputLabelStyle = {
+  display: "grid",
+  gap: 8,
+  fontWeight: 900,
+};
+
+const penaltyInputStyle = {
+  height: 54,
+  borderRadius: 14,
+  border: "1px solid rgba(255,255,255,.16)",
+  background: "rgba(0,0,0,.55)",
+  color: "white",
+  textAlign: "center" as const,
+  fontSize: 24,
+  fontWeight: 900,
+  outline: "none",
+};
+
+const winnerBoxStyle = {
+  padding: 14,
+  borderRadius: 16,
+  border: "1px solid rgba(255,255,255,.12)",
+  background: "rgba(0,0,0,.35)",
+};
+
+const winnerTitleStyle = {
+  color: "#FFCC00",
+  fontWeight: 900,
+  marginBottom: 10,
+};
+
+const winnerOptionStyle = {
+  display: "flex",
+  alignItems: "center",
+  gap: 10,
+  marginTop: 8,
+  fontWeight: 900,
+  cursor: "pointer",
 };
