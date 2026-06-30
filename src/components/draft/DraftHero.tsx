@@ -3,8 +3,18 @@
 import TeamFlag from "@/components/TeamFlag";
 import type { DraftParticipant } from "@/app/draft/page";
 
+type LatestElimination = {
+  match_id: number;
+  updated_at: string;
+  team_name: string;
+  team_flag: string;
+  eliminated_round: string | null;
+  participant_name: string | null;
+} | null;
+
 type Props = {
   participants?: DraftParticipant[];
+  latestElimination?: LatestElimination;
 };
 
 function getAlivePicks(participant: DraftParticipant) {
@@ -23,7 +33,7 @@ function isParticipantAlive(participant: DraftParticipant) {
   return getAlivePicks(participant).length > 0;
 }
 
-export default function DraftHero({ participants = [] }: Props) {
+export default function DraftHero({ participants = [], latestElimination = null }: Props) {
   const aliveParticipants = participants.filter(isParticipantAlive);
   const eliminatedParticipants = participants.filter(
     (participant) => !isParticipantAlive(participant)
@@ -48,15 +58,6 @@ export default function DraftHero({ participants = [] }: Props) {
   const survivalPercent =
     totalTeams === 0 ? 0 : Math.round((aliveTeams / totalTeams) * 100);
 
-  const latestEliminatedPick = participants
-    .flatMap((participant) =>
-      participant.picks.map((pick) => ({
-        ...pick,
-        participantName: participant.user_name,
-      }))
-    )
-    .filter((pick) => pick.knockout_teams?.is_eliminated)
-    .sort((a, b) => b.pick_number - a.pick_number)[0];
 
   return (
     <section className="overflow-hidden rounded-[2rem] border border-white/10 bg-black/40 shadow-2xl">
@@ -150,19 +151,19 @@ export default function DraftHero({ participants = [] }: Props) {
               Última eliminación
             </p>
 
-            {latestEliminatedPick?.knockout_teams ? (
+            {latestElimination ? (
               <div className="mt-4 flex items-center gap-4">
                 <TeamFlag
-                  code={latestEliminatedPick.knockout_teams.team_flag}
-                  name={latestEliminatedPick.knockout_teams.team_name}
+                  code={latestElimination.team_flag}
+                  name={latestElimination.team_name}
                   style={{ width: 58, borderRadius: 10 }}
                 />
                 <div>
                   <p className="text-xl font-black text-red-200 line-through">
-                    {latestEliminatedPick.knockout_teams.team_name}
+                    {latestElimination.team_name}
                   </p>
                   <p className="text-sm text-slate-400">
-                    {latestEliminatedPick.participantName} · {latestEliminatedPick.knockout_teams.eliminated_round ?? "Eliminada"}
+                    {latestElimination.participant_name ?? "Sin participante"} · {latestElimination.eliminated_round ?? "Eliminada"}
                   </p>
                 </div>
               </div>

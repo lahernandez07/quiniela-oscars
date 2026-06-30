@@ -43,6 +43,14 @@ type DraftData = {
   picks: DraftPick[];
   teams: KnockoutTeam[];
   available_teams: KnockoutTeam[];
+  latest_elimination: {
+    match_id: number;
+    updated_at: string;
+    team_name: string;
+    team_flag: string;
+    eliminated_round: string | null;
+    participant_name: string | null;
+  } | null;
   participants: DraftParticipant[];
 };
 
@@ -145,7 +153,10 @@ export default function DraftPage() {
       }}
     >
       <div className="mx-auto max-w-7xl space-y-6">
-        <DraftHero participants={data.participants ?? []} />
+        <DraftHero
+          participants={data.participants ?? []}
+          latestElimination={data.latest_elimination ?? null}
+        />
 
         <DraftParticipants participants={data.participants} />
       </div>

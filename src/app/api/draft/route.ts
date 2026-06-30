@@ -133,11 +133,35 @@ export async function GET() {
     );
   }
 
+  const { data: latestEliminationRows, error: latestEliminationError } =
+    await supabase
+      .from("results_dev")
+      .select("match_id, eliminated_team, updated_at")
+      .not("eliminated_team", "is", null)
+      .order("updated_at", { ascending: false })
+      .limit(1);
+
+  if (latestEliminationError) {
+    return NextResponse.json(
+      { error: latestEliminationError.message },
+      { status: 500 }
+    );
+  }
+
   const draftPicks = ((picks ?? []) as unknown as DraftPickRaw[]).map(
     normalizePick
   );
 
   const knockoutTeams = (teams ?? []) as KnockoutTeam[];
+
+  const latestEliminationResult = latestEliminationRows?.[0] ?? null;
+  const latestEliminatedTeam = latestEliminationResult?.eliminated_team
+    ? knockoutTeams.find(
+        (team) =>
+          normalizeName(team.team_name) ===
+          normalizeName(latestEliminationResult.eliminated_team)
+      ) ?? null
+    : null;
 
   const selectedTeamIds = new Set(
     draftPicks
@@ -181,6 +205,10 @@ export async function GET() {
     return acc;
   }, {});
 
+  const latestEliminatedPick = latestEliminatedTeam
+    ? draftPicks.find((pick) => pick.team_id === latestEliminatedTeam.id) ?? null
+    : null;
+
   return NextResponse.json({
     total_picks: draftPicks.length,
     completed_picks: completedPicks,
@@ -189,6 +217,16 @@ export async function GET() {
     picks: draftPicks,
     teams: knockoutTeams,
     available_teams: availableTeams,
+    latest_elimination: latestEliminatedTeam
+      ? {
+          match_id: latestEliminationResult.match_id,
+          updated_at: latestEliminationResult.updated_at,
+          team_name: latestEliminatedTeam.team_name,
+          team_flag: latestEliminatedTeam.team_flag,
+          eliminated_round: latestEliminatedTeam.eliminated_round,
+          participant_name: latestEliminatedPick?.user_name ?? null,
+        }
+      : null,
     participants: Object.values(picksByParticipant)
       .map((participant) => ({
         ...participant,

@@ -27,6 +27,72 @@ function resolveTeamNameForDatabase(teamName: string) {
   return teamName;
 }
 
+function teamNamesMatch(left: string, right: string) {
+  return normalizeTeamName(left) === normalizeTeamName(right);
+}
+
+async function updateKnockoutElimination(match: any, eliminatedTeam: string) {
+  const homeTeamName = resolveTeamNameForDatabase(match.home);
+  const awayTeamName = resolveTeamNameForDatabase(match.away);
+  const eliminatedTeamName = resolveTeamNameForDatabase(eliminatedTeam);
+
+  const { data: teams, error: teamsError } = await supabase
+    .from("knockout_teams")
+    .select("id, team_name");
+
+  if (teamsError) {
+    return { error: teamsError };
+  }
+
+  const matchTeamIds = (teams ?? [])
+    .filter(
+      (team: any) =>
+        teamNamesMatch(team.team_name, homeTeamName) ||
+        teamNamesMatch(team.team_name, awayTeamName)
+    )
+    .map((team: any) => team.id);
+
+  if (matchTeamIds.length > 0) {
+    const { error: resetError } = await supabase
+      .from("knockout_teams")
+      .update({
+        is_eliminated: false,
+        eliminated_round: null,
+      })
+      .in("id", matchTeamIds);
+
+    if (resetError) {
+      return { error: resetError };
+    }
+  }
+
+  const eliminatedRecord = (teams ?? []).find((team: any) =>
+    teamNamesMatch(team.team_name, eliminatedTeamName)
+  );
+
+  if (!eliminatedRecord) {
+    return {
+      error: {
+        message: `No se encontró el equipo eliminado en knockout_teams: ${eliminatedTeamName}`,
+      },
+    };
+  }
+
+  const { error: eliminationError } = await supabase
+    .from("knockout_teams")
+    .update({
+      is_eliminated: true,
+      eliminated_round: match.round ?? "knockout",
+    })
+    .eq("id", eliminatedRecord.id);
+
+  if (eliminationError) {
+    return { error: eliminationError };
+  }
+
+  return { error: null };
+}
+
 function getWinnerAndEliminatedTeam(match: any, body: any) {
   const homeScore = Number(body.home_score);
   const awayScore = Number(body.away_score);
@@ -207,15 +273,10 @@ export async function POST(request: NextRequest) {
     }
 
     if (eliminatedTeam && (match.round || Number(match.matchNumber) >= 73)) {
-      const eliminatedTeamName = resolveTeamNameForDatabase(eliminatedTeam);
-
-      const { error: eliminationError } = await supabase
-        .from("knockout_teams")
-        .update({
-          is_eliminated: true,
-          eliminated_round: match.round ?? "knockout",
-        })
-        .eq("team_name", eliminatedTeamName);
+      const { error: eliminationError } = await updateKnockoutElimination(
+        match,
+        eliminatedTeam
+      );
 
       if (eliminationError) {
         console.error("SUPABASE ELIMINATION UPDATE ERROR:", eliminationError);
