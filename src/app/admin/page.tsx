@@ -76,6 +76,18 @@ function isOfficialScoreTied(result?: ResultInput) {
   return Number(result.homeScore) === Number(result.awayScore);
 }
 
+function getPenaltyWinnerSide(result?: ResultInput): "home" | "away" | "" {
+  if (!result?.homePenaltyScore || !result?.awayPenaltyScore) return "";
+
+  const homePenalties = Number(result.homePenaltyScore);
+  const awayPenalties = Number(result.awayPenaltyScore);
+
+  if (homePenalties > awayPenalties) return "home";
+  if (awayPenalties > homePenalties) return "away";
+
+  return "";
+}
+
 export default function AdminPage() {
   const supabase = supabaseBrowser();
 
@@ -215,14 +227,16 @@ export default function AdminPage() {
     const mustCapturePenalties =
       isKnockoutMatch(match) && isOfficialScoreTied(result);
 
+    const penaltyWinnerSide = getPenaltyWinnerSide(result);
+
     if (mustCapturePenalties) {
       if (!result.homePenaltyScore || !result.awayPenaltyScore) {
         alert("El partido terminó empatado. Captura el marcador de penales.");
         return;
       }
 
-      if (!result.winnerSide) {
-        alert("Selecciona el ganador de la tanda de penales.");
+      if (!penaltyWinnerSide) {
+        alert("El marcador de penales no puede quedar empatado.");
         return;
       }
     }
@@ -246,7 +260,7 @@ export default function AdminPage() {
           away_penalty_score: mustCapturePenalties
             ? Number(result.awayPenaltyScore)
             : null,
-          winner_side: mustCapturePenalties ? result.winnerSide : null,
+          winner_side: mustCapturePenalties ? penaltyWinnerSide : null,
         }),
       });
 
@@ -484,6 +498,10 @@ export default function AdminPage() {
           const defined = isMatchDefined(match);
           const showPenaltyFields =
             isKnockoutMatch(match) && isOfficialScoreTied(current);
+          const penaltyWinnerSide = getPenaltyWinnerSide(current);
+          const penaltyWinnerName = penaltyWinnerSide
+            ? getDisplayTeam(match, penaltyWinnerSide)
+            : "Pendiente";
 
           return (
             <div key={match.id} style={matchCardStyle}>
@@ -577,30 +595,10 @@ export default function AdminPage() {
 
                     <div style={winnerBoxStyle}>
                       <div style={winnerTitleStyle}>Ganador oficial</div>
-
-                      <label style={winnerOptionStyle}>
-                        <input
-                          type="radio"
-                          name={`winner-${match.id}`}
-                          checked={current?.winnerSide === "home"}
-                          onChange={() =>
-                            updateResult(match.id, "winnerSide", "home")
-                          }
-                        />
-                        {getDisplayTeam(match, "home")}
-                      </label>
-
-                      <label style={winnerOptionStyle}>
-                        <input
-                          type="radio"
-                          name={`winner-${match.id}`}
-                          checked={current?.winnerSide === "away"}
-                          onChange={() =>
-                            updateResult(match.id, "winnerSide", "away")
-                          }
-                        />
-                        {getDisplayTeam(match, "away")}
-                      </label>
+                      <div style={winnerAutoStyle}>{penaltyWinnerName}</div>
+                      <div style={winnerHintStyle}>
+                        Se calcula automáticamente con el marcador de penales.
+                      </div>
                     </div>
                   </div>
                 </section>
@@ -686,8 +684,9 @@ const simplePage = {
 
 const pageStyle = {
   minHeight: "100vh",
-  padding: "24px 32px 60px",
+  padding: "clamp(14px, 4vw, 32px) clamp(12px, 4vw, 32px) 90px",
   color: "white",
+  overflowX: "hidden" as const,
 };
 
 const heroStyle = {
@@ -795,9 +794,10 @@ const emptyStyle = {
 const matchCardStyle = {
   border: "1px solid rgba(255,255,255,.12)",
   borderRadius: 28,
-  padding: 24,
+  padding: "clamp(16px, 4vw, 24px)",
   marginBottom: 24,
   background: "rgba(0,0,0,.28)",
+  overflow: "hidden" as const,
 };
 
 const matchHeaderStyle = {
@@ -823,6 +823,7 @@ const scoreGridStyle = {
   display: "grid",
   gridTemplateColumns: "1fr",
   gap: 18,
+  width: "100%",
   maxWidth: 560,
   margin: "0 auto",
 };
@@ -837,46 +838,54 @@ const vsStyle = {
 const saveRowStyle = {
   marginTop: 26,
   display: "flex",
-  justifyContent: "flex-end",
+  justifyContent: "center",
 };
 
 const scoreRowStyle = {
   display: "grid",
-  gridTemplateColumns: "90px 64px 1fr",
-  gap: 14,
+  gridTemplateColumns: "minmax(68px, 86px) minmax(44px, 64px) minmax(0, 1fr)",
+  gap: 12,
   alignItems: "center",
+  width: "100%",
+  minWidth: 0,
 };
 
 const scoreInput = {
-  width: 86,
-  height: 72,
+  width: "100%",
+  height: 64,
   borderRadius: 16,
   border: "1px solid rgba(255,255,255,.15)",
   background: "rgba(0,0,0,.55)",
   color: "white",
   textAlign: "center" as const,
-  fontSize: 30,
+  fontSize: 28,
   fontWeight: 900,
   outline: "none",
+  boxSizing: "border-box" as const,
 };
 
 const flagStyle = {
-  width: 64,
-  height: 48,
+  width: "100%",
+  maxWidth: 64,
+  height: 44,
   objectFit: "cover" as const,
   borderRadius: 10,
   border: "1px solid rgba(255,255,255,0.12)",
 };
 
 const teamNameStyle = {
-  fontSize: "clamp(22px,4vw,32px)",
+  fontSize: "clamp(17px, 5vw, 32px)",
   fontWeight: 900,
+  minWidth: 0,
+  overflowWrap: "anywhere" as const,
 };
 
 const greenButton = {
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
+  width: "100%",
+  maxWidth: 360,
   padding: "14px 22px",
   borderRadius: 16,
   border: "none",
@@ -892,10 +901,16 @@ const yellowButton = {
 };
 const penaltyCardStyle = {
   marginTop: 24,
-  padding: 18,
+  padding: "clamp(14px, 4vw, 18px)",
   borderRadius: 20,
   border: "1px solid rgba(255,204,0,.22)",
   background: "rgba(255,204,0,.07)",
+  width: "100%",
+  maxWidth: 560,
+  marginLeft: "auto",
+  marginRight: "auto",
+  boxSizing: "border-box" as const,
+  overflow: "hidden" as const,
 };
 
 const penaltyToggleStyle = {
@@ -905,6 +920,8 @@ const penaltyToggleStyle = {
   fontWeight: 900,
   color: "#FFCC00",
   cursor: "pointer",
+  fontSize: "clamp(18px, 5vw, 24px)",
+  lineHeight: 1.25,
 };
 
 const penaltyDetailsStyle = {
@@ -916,17 +933,20 @@ const penaltyDetailsStyle = {
 
 const penaltyScoresStyle = {
   display: "grid",
-  gridTemplateColumns: "1fr 1fr",
+  gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
   gap: 14,
+  width: "100%",
 };
 
 const penaltyInputLabelStyle = {
   display: "grid",
   gap: 8,
   fontWeight: 900,
+  minWidth: 0,
 };
 
 const penaltyInputStyle = {
+  width: "100%",
   height: 54,
   borderRadius: 14,
   border: "1px solid rgba(255,255,255,.16)",
@@ -936,6 +956,7 @@ const penaltyInputStyle = {
   fontSize: 24,
   fontWeight: 900,
   outline: "none",
+  boxSizing: "border-box" as const,
 };
 
 const winnerBoxStyle = {
@@ -943,6 +964,8 @@ const winnerBoxStyle = {
   borderRadius: 16,
   border: "1px solid rgba(255,255,255,.12)",
   background: "rgba(0,0,0,.35)",
+  width: "100%",
+  boxSizing: "border-box" as const,
 };
 
 const winnerTitleStyle = {
@@ -951,11 +974,14 @@ const winnerTitleStyle = {
   marginBottom: 10,
 };
 
-const winnerOptionStyle = {
-  display: "flex",
-  alignItems: "center",
-  gap: 10,
-  marginTop: 8,
+const winnerAutoStyle = {
+  fontSize: "clamp(22px, 6vw, 32px)",
   fontWeight: 900,
-  cursor: "pointer",
+  color: "#7CFC00",
+};
+
+const winnerHintStyle = {
+  marginTop: 6,
+  color: "rgba(255,255,255,.65)",
+  fontSize: 13,
 };
