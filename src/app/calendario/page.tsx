@@ -7,19 +7,33 @@ type Match = {
   id: number;
   matchNumber: number;
   stage: string;
-  group: string;
+  round?: string;
+  order?: number;
+  group: string | null;
   home: string;
   away: string;
   homeFlag: string;
   awayFlag: string;
+  homePlaceholder?: string;
+  awayPlaceholder?: string;
+  defined?: boolean;
   date: string;
   time: string;
   stadium: string;
   city: string;
   cut: string;
+  result?: {
+    home_score: number;
+    away_score: number;
+    decided_by_penalties?: boolean;
+    home_penalty_score?: number | null;
+    away_penalty_score?: number | null;
+    winner_side?: "home" | "away" | null;
+    winner_team?: string | null;
+  } | null;
 };
 
-type CutFilter = "Todos" | "Hoy" | "1" | "2" | "3";
+type CutFilter = "Todos" | "Hoy" | "1" | "2" | "3" | "R32" | "R16" | "QF" | "SF" | "Final";
 
 export default function CalendarioPage() {
   const [matches, setMatches] = useState<Match[]>([]);
@@ -30,6 +44,18 @@ export default function CalendarioPage() {
 
   useEffect(() => {
     async function loadMatches() {
+      try {
+        const response = await fetch("/api/results", { cache: "no-store" });
+        const data = await response.json();
+
+        if (Array.isArray(data)) {
+          setMatches(data);
+          return;
+        }
+      } catch (error) {
+        console.error("No se pudieron cargar resultados para calendario", error);
+      }
+
       const response = await fetch("/data/worldcup2026-group-stage.json");
       const data = await response.json();
 
@@ -42,7 +68,7 @@ export default function CalendarioPage() {
   const today = getTodayMexicoCity();
 
   const groups = useMemo(() => {
-    return ["Todos", ...Array.from(new Set(matches.map((m) => m.group)))];
+    return ["Todos", ...Array.from(new Set(matches.map((m) => getGroupLabel(m))))];
   }, [matches]);
 
   const dates = useMemo(() => {
@@ -54,16 +80,21 @@ export default function CalendarioPage() {
       const cutOk =
         selectedCut === "Todos" ||
         (selectedCut === "Hoy" && match.date === today) ||
-        getCutByDate(match.date) === selectedCut;
+        (selectedCut === "Final" && ["3P", "F"].includes(match.round ?? "")) ||
+        match.round === selectedCut ||
+        (!isKnockoutMatch(match) && getCutByDate(match.date) === selectedCut);
 
       const groupOk =
-        selectedGroup === "Todos" || match.group === selectedGroup;
+        selectedGroup === "Todos" || getGroupLabel(match) === selectedGroup;
 
       const dateOk =
         selectedDate === "Todos" || match.date === selectedDate;
 
+      const resolvedHome = resolvePlaceholderTeam(match, "home", matches);
+      const resolvedAway = resolvePlaceholderTeam(match, "away", matches);
+
       const text =
-        `${match.home} ${match.away} ${match.city} ${match.stadium}`.toLowerCase();
+        `${resolvedHome.team} ${resolvedAway.team} ${match.city} ${match.stadium} ${getGroupLabel(match)}`.toLowerCase();
 
       const searchOk =
         search.trim() === "" || text.includes(search.toLowerCase());
@@ -119,6 +150,11 @@ export default function CalendarioPage() {
             { value: "1", label: "Semana 1" },
             { value: "2", label: "Semana 2" },
             { value: "3", label: "Semana 3" },
+            { value: "R32", label: "Dieciseisavos" },
+            { value: "R16", label: "Octavos" },
+            { value: "QF", label: "Cuartos" },
+            { value: "SF", label: "Semis" },
+            { value: "Final", label: "Final" },
           ].map((cut) => (
             <button
               key={cut.value}
@@ -181,35 +217,45 @@ export default function CalendarioPage() {
             <h2>{formatDate(date)}</h2>
 
             <div className="grid">
-              {dayMatches.map((match) => (
-                <article key={match.id} className="card">
-                  <div className="top">
-                    <span>Partido {match.matchNumber}</span>
-                    <strong>{match.group}</strong>
-                  </div>
+              {dayMatches.map((match) => {
+                const resolvedHome = resolvePlaceholderTeam(match, "home", matches);
+                const resolvedAway = resolvePlaceholderTeam(match, "away", matches);
+                const resolvedDefined = resolvedHome.resolved && resolvedAway.resolved;
 
-                  <div className="teams">
-                    <div>
-                      <span className="flag">{flagEmoji(match.homeFlag)}</span>
-                      {match.home}
+                return (
+                  <article key={match.id} className="card">
+                    <div className="top">
+                      <span>Partido {match.matchNumber}</span>
+                      <strong>{getGroupLabel(match)}</strong>
                     </div>
 
-                    <div className="vs">VS</div>
+                    <div className="teams">
+                      <div>
+                        <span className="flag">{flagEmoji(resolvedHome.flag)}</span>
+                        {resolvedHome.team}
+                      </div>
 
-                    <div>
-                      <span className="flag">{flagEmoji(match.awayFlag)}</span>
-                      {match.away}
+                      <div className="vs">VS</div>
+
+                      <div>
+                        <span className="flag">{flagEmoji(resolvedAway.flag)}</span>
+                        {resolvedAway.team}
+                      </div>
                     </div>
-                  </div>
 
-                  <div className="time">{match.time} CDMX</div>
+                    {!resolvedDefined && (
+                      <div className="pendingBadge">Cruce por definir</div>
+                    )}
 
-                  <div className="meta">
-                    <div>{match.stadium}</div>
-                    <div>{match.city}</div>
-                  </div>
-                </article>
-              ))}
+                    <div className="time">{match.time || "Hora por definir"} CDMX</div>
+
+                    <div className="meta">
+                      <div>{match.stadium || "Estadio por definir"}</div>
+                      <div>{match.city || "Sede por definir"}</div>
+                    </div>
+                  </article>
+                );
+              })}
             </div>
           </section>
         ))}
@@ -397,6 +443,20 @@ export default function CalendarioPage() {
           letter-spacing: 1px;
         }
 
+        .pendingBadge {
+          margin: 12px auto 0;
+          width: fit-content;
+          border-radius: 999px;
+          border: 1px solid rgba(255, 215, 0, 0.3);
+          background: rgba(255, 215, 0, 0.1);
+          color: gold;
+          padding: 6px 12px;
+          font-size: 12px;
+          font-weight: 900;
+          text-transform: uppercase;
+          letter-spacing: 0.08em;
+        }
+
         .time {
           text-align: center;
           font-size: 30px;
@@ -471,6 +531,151 @@ function formatDate(date: string) {
     day: "numeric",
     month: "long",
   }).format(new Date(`${date}T12:00:00`));
+}
+
+function isKnockoutMatch(match: Match) {
+  return Boolean(match.round) || Number(match.matchNumber) >= 73;
+}
+
+function isMatchDefined(match: Match) {
+  if (!isKnockoutMatch(match)) return true;
+  return match.defined === true && !!match.home && !!match.away;
+}
+
+function getGroupLabel(match: Match) {
+  return match.group ?? match.round ?? "Eliminatoria";
+}
+
+function getDisplayTeam(match: Match, side: "home" | "away") {
+  if (side === "home") {
+    return match.home || match.homePlaceholder || "Equipo por definir";
+  }
+
+  return match.away || match.awayPlaceholder || "Equipo por definir";
+}
+
+function getDisplayFlag(match: Match, side: "home" | "away") {
+  if (!isMatchDefined(match)) return "un";
+  return side === "home" ? match.homeFlag : match.awayFlag;
+}
+
+function normalizeTeamName(value: string) {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
+}
+
+function getReferencedMatchNumber(value?: string) {
+  if (!value) return null;
+
+  const match = value.match(/M(\d+)/i);
+
+  if (!match) return null;
+
+  return Number(match[1]);
+}
+
+function getWinnerFromMatch(match?: Match) {
+  if (!match?.result) return null;
+
+  const winnerTeam = match.result.winner_team;
+
+  if (winnerTeam) {
+    const normalizedWinner = normalizeTeamName(winnerTeam);
+
+    if (normalizeTeamName(match.home) === normalizedWinner) {
+      return {
+        team: match.home,
+        flag: match.homeFlag,
+      };
+    }
+
+    if (normalizeTeamName(match.away) === normalizedWinner) {
+      return {
+        team: match.away,
+        flag: match.awayFlag,
+      };
+    }
+
+    return {
+      team: winnerTeam,
+      flag: "un",
+    };
+  }
+
+  if (match.result.winner_side === "home") {
+    return {
+      team: match.home,
+      flag: match.homeFlag,
+    };
+  }
+
+  if (match.result.winner_side === "away") {
+    return {
+      team: match.away,
+      flag: match.awayFlag,
+    };
+  }
+
+  if (match.result.home_score > match.result.away_score) {
+    return {
+      team: match.home,
+      flag: match.homeFlag,
+    };
+  }
+
+  if (match.result.away_score > match.result.home_score) {
+    return {
+      team: match.away,
+      flag: match.awayFlag,
+    };
+  }
+
+  return null;
+}
+
+function resolvePlaceholderTeam(
+  match: Match,
+  side: "home" | "away",
+  allMatches: Match[]
+) {
+  const currentTeam = side === "home" ? match.home : match.away;
+  const placeholder =
+    side === "home" ? match.homePlaceholder : match.awayPlaceholder;
+
+  const referenceMatchNumber = getReferencedMatchNumber(
+    currentTeam || placeholder
+  );
+
+  if (!referenceMatchNumber) {
+    return {
+      team: getDisplayTeam(match, side),
+      flag: getDisplayFlag(match, side),
+      resolved: isMatchDefined(match),
+    };
+  }
+
+  const sourceMatch = allMatches.find(
+    (item) => Number(item.matchNumber) === referenceMatchNumber
+  );
+
+  const winner = getWinnerFromMatch(sourceMatch);
+
+  if (!winner) {
+    return {
+      team: getDisplayTeam(match, side),
+      flag: getDisplayFlag(match, side),
+      resolved: false,
+    };
+  }
+
+  return {
+    team: winner.team,
+    flag: winner.flag,
+    resolved: true,
+  };
 }
 
 function flagEmoji(code: string) {
