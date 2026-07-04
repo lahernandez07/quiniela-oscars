@@ -126,6 +126,15 @@ export default function AppHeader() {
               </Link>
 
               <Link
+                href="/resultados"
+                className={
+                  isActive("/resultados") ? activePrimaryButton : navButton
+                }
+              >
+                Resultados
+              </Link>
+
+              <Link
                 href="/grupos"
                 className={
                   isActive("/grupos") ? activePrimaryButton : navButton
@@ -196,6 +205,17 @@ export default function AppHeader() {
               }
             >
               Calendario
+            </Link>
+
+            <Link
+              href="/resultados"
+              className={
+                isActive("/resultados")
+                  ? mobileActivePrimaryButton
+                  : mobileNavButton
+              }
+            >
+              Resultados
             </Link>
 
             <Link
