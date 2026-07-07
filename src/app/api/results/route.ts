@@ -31,6 +31,123 @@ function teamNamesMatch(left: string, right: string) {
   return normalizeTeamName(left) === normalizeTeamName(right);
 }
 
+function getReferencedMatchNumber(value?: string) {
+  if (!value) return null;
+
+  const match = value.match(/M(\d+)/i);
+
+  if (!match) return null;
+
+  return Number(match[1]);
+}
+
+function getWinnerFromStoredResult(match: any, result: any) {
+  if (!match || !result) return null;
+
+  if (result.winner_team) {
+    const normalizedWinner = normalizeTeamName(result.winner_team);
+
+    if (teamNamesMatch(match.home, normalizedWinner)) {
+      return {
+        team: match.home,
+        flag: match.homeFlag,
+      };
+    }
+
+    if (teamNamesMatch(match.away, normalizedWinner)) {
+      return {
+        team: match.away,
+        flag: match.awayFlag,
+      };
+    }
+
+    return {
+      team: result.winner_team,
+      flag: "un",
+    };
+  }
+
+  if (result.winner_side === "home") {
+    return {
+      team: match.home,
+      flag: match.homeFlag,
+    };
+  }
+
+  if (result.winner_side === "away") {
+    return {
+      team: match.away,
+      flag: match.awayFlag,
+    };
+  }
+
+  if (Number(result.home_score) > Number(result.away_score)) {
+    return {
+      team: match.home,
+      flag: match.homeFlag,
+    };
+  }
+
+  if (Number(result.away_score) > Number(result.home_score)) {
+    return {
+      team: match.away,
+      flag: match.awayFlag,
+    };
+  }
+
+  return null;
+}
+
+function resolveMatchSide(
+  match: any,
+  side: "home" | "away",
+  matches: any[],
+  storedResults: any[]
+) {
+  const currentTeam = side === "home" ? match.home : match.away;
+  const currentFlag = side === "home" ? match.homeFlag : match.awayFlag;
+  const placeholder =
+    side === "home" ? match.homePlaceholder : match.awayPlaceholder;
+
+  const referenceMatchNumber = getReferencedMatchNumber(
+    currentTeam || placeholder
+  );
+
+  if (!referenceMatchNumber) {
+    return {
+      team: currentTeam,
+      flag: currentFlag,
+    };
+  }
+
+  const sourceMatch = matches.find(
+    (item: any) => Number(item.matchNumber) === referenceMatchNumber
+  );
+
+  const sourceResult = storedResults.find(
+    (item: any) => Number(item.match_id) === Number(sourceMatch?.id)
+  );
+
+  return getWinnerFromStoredResult(sourceMatch, sourceResult);
+}
+
+function resolveMatchTeams(match: any, matches: any[], storedResults: any[]) {
+  const resolvedHome = resolveMatchSide(match, "home", matches, storedResults);
+  const resolvedAway = resolveMatchSide(match, "away", matches, storedResults);
+
+  if (!resolvedHome || !resolvedAway) {
+    return match;
+  }
+
+  return {
+    ...match,
+    home: resolvedHome.team,
+    away: resolvedAway.team,
+    homeFlag: resolvedHome.flag,
+    awayFlag: resolvedAway.flag,
+  };
+}
+
 async function updateKnockoutElimination(match: any, eliminatedTeam: string) {
   const homeTeamName = resolveTeamNameForDatabase(match.home);
   const awayTeamName = resolveTeamNameForDatabase(match.away);
@@ -231,7 +348,32 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { winnerTeam, eliminatedTeam } = getWinnerAndEliminatedTeam(match, body);
+    const { data: storedResults, error: storedResultsError } = await supabase
+      .from("results_dev")
+      .select("*");
+
+    if (storedResultsError) {
+      console.error("SUPABASE STORED RESULTS ERROR:", storedResultsError);
+
+      return NextResponse.json(
+        {
+          error: storedResultsError.message,
+          details: storedResultsError,
+        },
+        { status: 500 }
+      );
+    }
+
+    const resolvedMatch = resolveMatchTeams(
+      match,
+      matches,
+      storedResults ?? []
+    );
+
+    const { winnerTeam, eliminatedTeam } = getWinnerAndEliminatedTeam(
+      resolvedMatch,
+      body
+    );
 
     const { data, error } = await supabase
       .from("results_dev")
@@ -274,7 +416,7 @@ export async function POST(request: NextRequest) {
 
     if (eliminatedTeam && (match.round || Number(match.matchNumber) >= 73)) {
       const { error: eliminationError } = await updateKnockoutElimination(
-        match,
+        resolvedMatch,
         eliminatedTeam
       );
 
