@@ -66,9 +66,145 @@ function getDisplayTeam(match: Match, side: "home" | "away") {
   return match.away || match.awayPlaceholder || "Equipo por definir";
 }
 
+
 function getDisplayFlag(match: Match, side: "home" | "away") {
   if (!isMatchDefined(match)) return "un";
   return side === "home" ? match.homeFlag : match.awayFlag;
+}
+
+function normalizeTeamName(value: string) {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
+}
+
+function getReferencedMatchNumber(value?: string) {
+  if (!value) return null;
+
+  const match = value.match(/M(\d+)/i);
+
+  if (!match) return null;
+
+  return Number(match[1]);
+}
+
+function getWinnerFromMatch(match?: Match) {
+  if (!match?.result) return null;
+
+  const winnerTeam = match.result.winner_team;
+
+  if (winnerTeam) {
+    const normalizedWinner = normalizeTeamName(winnerTeam);
+
+    if (normalizeTeamName(match.home) === normalizedWinner) {
+      return {
+        side: "home" as const,
+        team: match.home,
+        flag: match.homeFlag,
+      };
+    }
+
+    if (normalizeTeamName(match.away) === normalizedWinner) {
+      return {
+        side: "away" as const,
+        team: match.away,
+        flag: match.awayFlag,
+      };
+    }
+
+    return {
+      side: null,
+      team: winnerTeam,
+      flag: "un",
+    };
+  }
+
+  if (match.result.winner_side === "home") {
+    return {
+      side: "home" as const,
+      team: match.home,
+      flag: match.homeFlag,
+    };
+  }
+
+  if (match.result.winner_side === "away") {
+    return {
+      side: "away" as const,
+      team: match.away,
+      flag: match.awayFlag,
+    };
+  }
+
+  if (match.result.home_score > match.result.away_score) {
+    return {
+      side: "home" as const,
+      team: match.home,
+      flag: match.homeFlag,
+    };
+  }
+
+  if (match.result.away_score > match.result.home_score) {
+    return {
+      side: "away" as const,
+      team: match.away,
+      flag: match.awayFlag,
+    };
+  }
+
+  return null;
+}
+
+function resolvePlaceholderTeam(
+  match: Match,
+  side: "home" | "away",
+  allMatches: Match[]
+) {
+  const currentTeam = side === "home" ? match.home : match.away;
+  const placeholder =
+    side === "home" ? match.homePlaceholder : match.awayPlaceholder;
+
+  const referenceMatchNumber = getReferencedMatchNumber(
+    currentTeam || placeholder
+  );
+
+  if (!referenceMatchNumber) {
+    return {
+      team: getDisplayTeam(match, side),
+      flag: getDisplayFlag(match, side),
+      resolved: isMatchDefined(match),
+    };
+  }
+
+  const sourceMatch = allMatches.find(
+    (item) => Number(item.matchNumber) === referenceMatchNumber
+  );
+
+  const winner = getWinnerFromMatch(sourceMatch);
+
+  if (!winner) {
+    return {
+      team: getDisplayTeam(match, side),
+      flag: getDisplayFlag(match, side),
+      resolved: false,
+    };
+  }
+
+  return {
+    team: winner.team,
+    flag: winner.flag,
+    resolved: true,
+  };
+}
+
+function isMatchReadyForCapture(match: Match, allMatches: Match[]) {
+  if (!isKnockoutMatch(match)) return true;
+
+  const resolvedHome = resolvePlaceholderTeam(match, "home", allMatches);
+  const resolvedAway = resolvePlaceholderTeam(match, "away", allMatches);
+
+  return resolvedHome.resolved && resolvedAway.resolved;
 }
 
 function isOfficialScoreTied(result?: ResultInput) {
@@ -214,7 +350,7 @@ export default function AdminPage() {
     const result = results[matchId];
     const match = matches.find((item) => item.id === matchId);
 
-    if (!match || !isMatchDefined(match)) {
+    if (!match || !isMatchReadyForCapture(match, matches)) {
       alert("Este partido todavía no tiene equipos definidos.");
       return;
     }
@@ -495,12 +631,16 @@ export default function AdminPage() {
         filteredMatches.map((match) => {
           const current = results[match.id];
           const resultCaptured = hasResult(match);
-          const defined = isMatchDefined(match);
+          const resolvedHome = resolvePlaceholderTeam(match, "home", matches);
+          const resolvedAway = resolvePlaceholderTeam(match, "away", matches);
+          const defined = resolvedHome.resolved && resolvedAway.resolved;
           const showPenaltyFields =
             isKnockoutMatch(match) && isOfficialScoreTied(current);
           const penaltyWinnerSide = getPenaltyWinnerSide(current);
           const penaltyWinnerName = penaltyWinnerSide
-            ? getDisplayTeam(match, penaltyWinnerSide)
+            ? penaltyWinnerSide === "home"
+              ? resolvedHome.team
+              : resolvedAway.team
             : "Pendiente";
 
           return (
@@ -531,8 +671,8 @@ export default function AdminPage() {
               <div style={scoreGridStyle}>
                 <AdminScoreRow
                   score={current?.homeScore ?? ""}
-                  team={getDisplayTeam(match, "home")}
-                  flag={getDisplayFlag(match, "home")}
+                  team={resolvedHome.team}
+                  flag={resolvedHome.flag}
                   onChange={(value) =>
                     updateResult(match.id, "homeScore", value)
                   }
@@ -542,8 +682,8 @@ export default function AdminPage() {
 
                 <AdminScoreRow
                   score={current?.awayScore ?? ""}
-                  team={getDisplayTeam(match, "away")}
-                  flag={getDisplayFlag(match, "away")}
+                  team={resolvedAway.team}
+                  flag={resolvedAway.flag}
                   onChange={(value) =>
                     updateResult(match.id, "awayScore", value)
                   }
@@ -559,7 +699,7 @@ export default function AdminPage() {
                   <div style={penaltyDetailsStyle}>
                     <div style={penaltyScoresStyle}>
                       <label style={penaltyInputLabelStyle}>
-                        <span>{getDisplayTeam(match, "home")}</span>
+                        <span>{resolvedHome.team}</span>
                         <input
                           type="number"
                           min="0"
@@ -576,7 +716,7 @@ export default function AdminPage() {
                       </label>
 
                       <label style={penaltyInputLabelStyle}>
-                        <span>{getDisplayTeam(match, "away")}</span>
+                        <span>{resolvedAway.team}</span>
                         <input
                           type="number"
                           min="0"
