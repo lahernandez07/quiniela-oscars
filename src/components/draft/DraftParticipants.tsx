@@ -7,6 +7,43 @@ type Props = {
   participants: DraftParticipant[];
 };
 
+function getSafeTeamFlag(teamName?: string | null, teamFlag?: string | null) {
+  if (teamFlag && teamFlag.trim() !== "") {
+    return teamFlag;
+  }
+
+  const normalizedName = (teamName ?? "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
+
+  const flagByTeamName: Record<string, string> = {
+    argentina: "ar",
+    australia: "au",
+    belgica: "be",
+    brasil: "br",
+    canada: "ca",
+    colombia: "co",
+    croacia: "hr",
+    egipto: "eg",
+    espana: "es",
+    "estados unidos": "us",
+    francia: "fr",
+    ghana: "gh",
+    inglaterra: "gb-eng",
+    marruecos: "ma",
+    mexico: "mx",
+    noruega: "no",
+    paraguay: "py",
+    portugal: "pt",
+    senegal: "sn",
+    suiza: "ch",
+  };
+
+  return flagByTeamName[normalizedName] ?? "un";
+}
+
 export default function DraftParticipants({ participants }: Props) {
   return (
     <section className="rounded-[2rem] border border-white/10 bg-slate-950/80 p-6 shadow-xl">
@@ -37,6 +74,10 @@ export default function DraftParticipants({ participants }: Props) {
                 .sort((a, b) => a.pick_number - b.pick_number)
                 .map((pick, index) => {
                   const isEliminated = pick.knockout_teams?.is_eliminated === true;
+                  const teamFlag = getSafeTeamFlag(
+                    pick.knockout_teams?.team_name,
+                    pick.knockout_teams?.team_flag
+                  );
 
                   return (
                   <div
@@ -64,7 +105,7 @@ export default function DraftParticipants({ participants }: Props) {
                     {pick.knockout_teams ? (
                       <div className="flex items-center gap-2">
                         <TeamFlag
-                          code={pick.knockout_teams.team_flag}
+                          code={teamFlag}
                           name={pick.knockout_teams.team_name}
                           style={{ width: 36, borderRadius: 7 }}
                         />
