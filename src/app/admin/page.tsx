@@ -80,6 +80,32 @@ function normalizeTeamName(value: string) {
     .trim();
 }
 
+function findTeamFlag(teamName: string, allMatches: Match[]) {
+  const normalizedTeam = normalizeTeamName(teamName);
+
+  for (const item of allMatches) {
+    if (
+      item.home &&
+      normalizeTeamName(item.home) === normalizedTeam &&
+      item.homeFlag &&
+      item.homeFlag !== "un"
+    ) {
+      return item.homeFlag;
+    }
+
+    if (
+      item.away &&
+      normalizeTeamName(item.away) === normalizedTeam &&
+      item.awayFlag &&
+      item.awayFlag !== "un"
+    ) {
+      return item.awayFlag;
+    }
+  }
+
+  return "un";
+}
+
 function getReferencedMatchNumber(value?: string) {
   if (!value) return null;
 
@@ -170,10 +196,17 @@ function resolvePlaceholderTeam(
   );
 
   if (!referenceMatchNumber) {
+    const displayTeam = getDisplayTeam(match, side);
+    const displayFlag = getDisplayFlag(match, side);
+    const resolvedFlag =
+      displayFlag && displayFlag !== "un"
+        ? displayFlag
+        : findTeamFlag(displayTeam, allMatches);
+
     return {
-      team: getDisplayTeam(match, side),
-      flag: getDisplayFlag(match, side),
-      resolved: isMatchDefined(match),
+      team: displayTeam,
+      flag: resolvedFlag,
+      resolved: Boolean(currentTeam),
     };
   }
 
@@ -193,7 +226,10 @@ function resolvePlaceholderTeam(
 
   return {
     team: winner.team,
-    flag: winner.flag,
+    flag:
+      winner.flag && winner.flag !== "un"
+        ? winner.flag
+        : findTeamFlag(winner.team, allMatches),
     resolved: true,
   };
 }

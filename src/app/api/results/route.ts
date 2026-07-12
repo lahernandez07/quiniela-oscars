@@ -31,6 +31,52 @@ function teamNamesMatch(left: string, right: string) {
   return normalizeTeamName(left) === normalizeTeamName(right);
 }
 
+function getFlagForTeam(teamName: string, matches: any[]) {
+  const normalizedTeam = normalizeTeamName(teamName);
+
+  for (const item of matches) {
+    if (
+      item.home &&
+      normalizeTeamName(item.home) === normalizedTeam &&
+      item.homeFlag &&
+      item.homeFlag !== "un"
+    ) {
+      return item.homeFlag;
+    }
+
+    if (
+      item.away &&
+      normalizeTeamName(item.away) === normalizedTeam &&
+      item.awayFlag &&
+      item.awayFlag !== "un"
+    ) {
+      return item.awayFlag;
+    }
+  }
+
+  const fallbackFlags: Record<string, string> = {
+    francia: "fr",
+    espana: "es",
+    inglaterra: "gb-eng",
+    belgica: "be",
+    noruega: "no",
+    marruecos: "ma",
+    argentina: "ar",
+    colombia: "co",
+    suiza: "ch",
+    egipto: "eg",
+    paraguay: "py",
+    canada: "ca",
+    brasil: "br",
+    mexico: "mx",
+    portugal: "pt",
+    "estados unidos": "us",
+    "ee uu": "us",
+  };
+
+  return fallbackFlags[normalizedTeam] ?? "un";
+}
+
 function getReferencedMatchNumber(value?: string) {
   if (!value) return null;
 
@@ -41,7 +87,11 @@ function getReferencedMatchNumber(value?: string) {
   return Number(match[1]);
 }
 
-function getWinnerFromStoredResult(match: any, result: any) {
+function getWinnerFromStoredResult(
+  match: any,
+  result: any,
+  matches: any[]
+) {
   if (!match || !result) return null;
 
   if (result.winner_team) {
@@ -50,48 +100,47 @@ function getWinnerFromStoredResult(match: any, result: any) {
     if (teamNamesMatch(match.home, normalizedWinner)) {
       return {
         team: match.home,
-        flag: match.homeFlag,
+        flag: match.homeFlag || getFlagForTeam(match.home, matches),
       };
     }
 
     if (teamNamesMatch(match.away, normalizedWinner)) {
       return {
         team: match.away,
-        flag: match.awayFlag,
+        flag: match.awayFlag || getFlagForTeam(match.away, matches),
       };
     }
-
     return {
       team: result.winner_team,
-      flag: "un",
+      flag: getFlagForTeam(result.winner_team, matches),
     };
   }
 
   if (result.winner_side === "home") {
     return {
       team: match.home,
-      flag: match.homeFlag,
+      flag: match.homeFlag || getFlagForTeam(match.home, matches),
     };
   }
 
   if (result.winner_side === "away") {
     return {
       team: match.away,
-      flag: match.awayFlag,
+      flag: match.awayFlag || getFlagForTeam(match.away, matches),
     };
   }
 
   if (Number(result.home_score) > Number(result.away_score)) {
     return {
       team: match.home,
-      flag: match.homeFlag,
+      flag: match.homeFlag || getFlagForTeam(match.home, matches),
     };
   }
 
   if (Number(result.away_score) > Number(result.home_score)) {
     return {
       team: match.away,
-      flag: match.awayFlag,
+      flag: match.awayFlag || getFlagForTeam(match.away, matches),
     };
   }
 
@@ -116,7 +165,10 @@ function resolveMatchSide(
   if (!referenceMatchNumber) {
     return {
       team: currentTeam,
-      flag: currentFlag,
+      flag:
+        currentFlag && currentFlag !== "un"
+          ? currentFlag
+          : getFlagForTeam(currentTeam ?? "", matches),
     };
   }
 
@@ -128,7 +180,7 @@ function resolveMatchSide(
     (item: any) => Number(item.match_id) === Number(sourceMatch?.id)
   );
 
-  return getWinnerFromStoredResult(sourceMatch, sourceResult);
+  return getWinnerFromStoredResult(sourceMatch, sourceResult, matches);
 }
 
 function resolveMatchTeams(match: any, matches: any[], storedResults: any[]) {
@@ -274,12 +326,18 @@ export async function GET() {
     }
 
     const mergedMatches = matches.map((match: any) => {
+      const resolvedMatch = resolveMatchTeams(
+        match,
+        matches,
+        results ?? []
+      );
+
       const result = (results ?? []).find(
-        (item: any) => item.match_id === match.id
+        (item: any) => Number(item.match_id) === Number(match.id)
       );
 
       return {
-        ...match,
+        ...resolvedMatch,
         result: result || null,
       };
     });
