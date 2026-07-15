@@ -116,6 +116,7 @@ function getReferencedMatchNumber(value?: string) {
   return Number(match[1]);
 }
 
+
 function getWinnerFromMatch(match?: Match) {
   if (!match?.result) return null;
 
@@ -182,6 +183,50 @@ function getWinnerFromMatch(match?: Match) {
   return null;
 }
 
+function getLoserFromMatch(match?: Match) {
+  if (!match?.result) return null;
+
+  const winner = getWinnerFromMatch(match);
+
+  if (!winner) return null;
+
+  if (winner.side === "home") {
+    return {
+      side: "away" as const,
+      team: match.away,
+      flag: match.awayFlag,
+    };
+  }
+
+  if (winner.side === "away") {
+    return {
+      side: "home" as const,
+      team: match.home,
+      flag: match.homeFlag,
+    };
+  }
+
+  const normalizedWinner = normalizeTeamName(winner.team);
+
+  if (normalizeTeamName(match.home) === normalizedWinner) {
+    return {
+      side: "away" as const,
+      team: match.away,
+      flag: match.awayFlag,
+    };
+  }
+
+  if (normalizeTeamName(match.away) === normalizedWinner) {
+    return {
+      side: "home" as const,
+      team: match.home,
+      flag: match.homeFlag,
+    };
+  }
+
+  return null;
+}
+
 function resolvePlaceholderTeam(
   match: Match,
   side: "home" | "away",
@@ -190,10 +235,10 @@ function resolvePlaceholderTeam(
   const currentTeam = side === "home" ? match.home : match.away;
   const placeholder =
     side === "home" ? match.homePlaceholder : match.awayPlaceholder;
+  const referenceValue = currentTeam || placeholder;
+  const shouldResolveLoser = /perdedor/i.test(referenceValue ?? "");
 
-  const referenceMatchNumber = getReferencedMatchNumber(
-    currentTeam || placeholder
-  );
+  const referenceMatchNumber = getReferencedMatchNumber(referenceValue);
 
   if (!referenceMatchNumber) {
     const displayTeam = getDisplayTeam(match, side);
@@ -214,9 +259,11 @@ function resolvePlaceholderTeam(
     (item) => Number(item.matchNumber) === referenceMatchNumber
   );
 
-  const winner = getWinnerFromMatch(sourceMatch);
+  const resolvedTeam = shouldResolveLoser
+    ? getLoserFromMatch(sourceMatch)
+    : getWinnerFromMatch(sourceMatch);
 
-  if (!winner) {
+  if (!resolvedTeam) {
     return {
       team: getDisplayTeam(match, side),
       flag: getDisplayFlag(match, side),
@@ -225,11 +272,11 @@ function resolvePlaceholderTeam(
   }
 
   return {
-    team: winner.team,
+    team: resolvedTeam.team,
     flag:
-      winner.flag && winner.flag !== "un"
-        ? winner.flag
-        : findTeamFlag(winner.team, allMatches),
+      resolvedTeam.flag && resolvedTeam.flag !== "un"
+        ? resolvedTeam.flag
+        : findTeamFlag(resolvedTeam.team, allMatches),
     resolved: true,
   };
 }

@@ -77,6 +77,7 @@ function getFlagForTeam(teamName: string, matches: any[]) {
   return fallbackFlags[normalizedTeam] ?? "un";
 }
 
+
 function getReferencedMatchNumber(value?: string) {
   if (!value) return null;
 
@@ -87,11 +88,16 @@ function getReferencedMatchNumber(value?: string) {
   return Number(match[1]);
 }
 
+type ResolvedTeam = {
+  team: string;
+  flag: string;
+};
+
 function getWinnerFromStoredResult(
   match: any,
   result: any,
   matches: any[]
-) {
+): ResolvedTeam | null {
   if (!match || !result) return null;
 
   if (result.winner_team) {
@@ -147,20 +153,57 @@ function getWinnerFromStoredResult(
   return null;
 }
 
+function getLoserFromStoredResult(
+  match: any,
+  result: any,
+  matches: any[]
+): ResolvedTeam | null {
+  if (!match || !result) return null;
+
+  const winner = getWinnerFromStoredResult(match, result, matches);
+
+  if (!winner) return null;
+
+  if (teamNamesMatch(winner.team, match.home)) {
+    return {
+      team: match.away,
+      flag:
+        match.awayFlag && match.awayFlag !== "un"
+          ? match.awayFlag
+          : getFlagForTeam(match.away, matches),
+    };
+  }
+
+  if (teamNamesMatch(winner.team, match.away)) {
+    return {
+      team: match.home,
+      flag:
+        match.homeFlag && match.homeFlag !== "un"
+          ? match.homeFlag
+          : getFlagForTeam(match.home, matches),
+    };
+  }
+
+  return null;
+}
+
 function resolveMatchSide(
   match: any,
   side: "home" | "away",
   matches: any[],
   storedResults: any[]
-) {
+): ResolvedTeam | null {
   const currentTeam = side === "home" ? match.home : match.away;
   const currentFlag = side === "home" ? match.homeFlag : match.awayFlag;
   const placeholder =
     side === "home" ? match.homePlaceholder : match.awayPlaceholder;
 
-  const referenceMatchNumber = getReferencedMatchNumber(
-    currentTeam || placeholder
-  );
+  const referenceValue = getReferencedMatchNumber(placeholder)
+    ? placeholder
+    : currentTeam;
+  const shouldResolveLoser = /perdedor/i.test(referenceValue ?? "");
+
+  const referenceMatchNumber = getReferencedMatchNumber(referenceValue);
 
   if (!referenceMatchNumber) {
     return {
@@ -180,10 +223,26 @@ function resolveMatchSide(
     (item: any) => Number(item.match_id) === Number(sourceMatch?.id)
   );
 
-  return getWinnerFromStoredResult(sourceMatch, sourceResult, matches);
+  if (!sourceMatch || !sourceResult) {
+    return null;
+  }
+
+  const resolvedSourceMatch = resolveMatchTeams(
+    sourceMatch,
+    matches,
+    storedResults
+  );
+
+  return shouldResolveLoser
+    ? getLoserFromStoredResult(resolvedSourceMatch, sourceResult, matches)
+    : getWinnerFromStoredResult(resolvedSourceMatch, sourceResult, matches);
 }
 
-function resolveMatchTeams(match: any, matches: any[], storedResults: any[]) {
+function resolveMatchTeams(
+  match: any,
+  matches: any[],
+  storedResults: any[]
+): any {
   const resolvedHome = resolveMatchSide(match, "home", matches, storedResults);
   const resolvedAway = resolveMatchSide(match, "away", matches, storedResults);
 
